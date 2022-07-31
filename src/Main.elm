@@ -22,9 +22,6 @@ import Time
 import Dict
 
 
-vertexRadius : Float
-vertexRadius = 20
-
 type MouseState = Up | Down
 type alias VertexIdx = Int
 type alias Vertex = (Number, Number) -- TODO: coords in [-1, -1] x [1, 1]
@@ -34,6 +31,9 @@ type alias Model = {
   vertices: Dict.Dict VertexIdx Vertex,
   edges: List (VertexIdx, VertexIdx)
   }
+
+vertexRadius : Float
+vertexRadius = 20
 
 initModel : Model
 initModel = {
@@ -49,6 +49,7 @@ initModel = {
   edges = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 0)]
   }
 
+main : Program () (Game Model) Msg
 main = game myRender myUpdate initModel
 
 myRender : Computer -> Model -> List Shape
@@ -63,6 +64,7 @@ myRender computer model = [
   ]
   ++ (model.vertices |> Dict.values |> List.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y))
 
+mousePositionText : Computer -> Shape
 mousePositionText computer =
   words palette.white (Debug.toString (computer.mouse.x, computer.mouse.y))
   |> move (computer.screen.left + 50) (computer.screen.top - 20)
