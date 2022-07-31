@@ -46,7 +46,13 @@ initModel = {
     (0, 200)
   ] |> List.indexedMap (\i v -> (i, v)) |> Dict.fromList,
   heldVertexIdx = Nothing,
-  edges = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 0)]
+  edges = [
+    (0, 1),
+    (1, 2),
+    (2, 3),
+    (3, 4),
+    (4, 0)
+    ]
   }
 
 main : Program () (Game Model) Msg
