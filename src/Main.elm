@@ -1458,7 +1458,7 @@ renderPolygon color coordinates shape =
 renderPath : Color -> List (Number, Number) -> Shape -> Svg.Svg msg
 renderPath color coordinates shape =
   Svg.polyline (
-    points (Debug.log "path" (List.foldl addPoint "" coordinates)) ::
+    points (List.foldl addPoint "" coordinates) ::
     fill "none" ::
     stroke (renderColor color) ::
     strokeWidth "10" ::
