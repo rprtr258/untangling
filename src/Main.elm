@@ -19,56 +19,57 @@ import Json.Decode as Decode
 import Set
 import Task
 import Time
-import Dict
+import Array
 
 
 type MouseState = Up | Down
 type alias VertexIdx = Int
-type alias Vertex = (Number, Number) -- TODO: coords in [-1, -1] x [1, 1]
+type alias Vertex = Vec2 -- TODO: coords in [-1, -1] x [1, 1]
 type alias Model = {
   mouse: MouseState,
   heldVertexIdx: Maybe VertexIdx,
-  vertices: Dict.Dict VertexIdx Vertex,
-  edges: List (VertexIdx, VertexIdx)
+  vertices: Array.Array (Vertex, List VertexIdx)
   }
 
 vertexRadius : Float
 vertexRadius = 20
 
+attractionG : Float
+attractionG = 10
+
 initModel : Model
 initModel = {
   mouse = Up,
   vertices = [
-    (400, 0),
-    (400, 200),
-    (400, 200),
-    (400, 200),
-    (0, 200)
-  ] |> List.indexedMap (\i v -> (i, v)) |> Dict.fromList,
-  heldVertexIdx = Nothing,
-  edges = [
-    (0, 1),
-    (1, 2),
-    (2, 3),
-    (3, 4),
-    (4, 0)
-    ]
+    ((0, 300), [1, 4]),
+    ((400, -150), [2, 0]),
+    ((-400, 150), [3, 1]),
+    ((450, 150), [4, 2]),
+    ((-400, -150), [0, 3])
+  ] |> Array.fromList,
+  heldVertexIdx = Nothing
   }
 
 main : Program () (Game Model) Msg
 main = game myRender myUpdate initModel
 
 myRender : Computer -> Model -> List Shape
-myRender computer model = [
-  rectangle palette.darkCharcoal computer.screen.width computer.screen.height,
-  words palette.white (Debug.toString model) |> move 0 (computer.screen.top - 20),
-  mousePositionText computer,
-  model.edges |> List.concatMap (\(i, j) -> [
-    model.vertices |> Dict.get i |> Maybe.withDefault (0, 0), -- TODO: show error instead
-    model.vertices |> Dict.get j |> Maybe.withDefault (0, 0)
-    ]) |> path palette.black
-  ]
-  ++ (model.vertices |> Dict.values |> List.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y))
+myRender computer model =
+  rectangle palette.darkCharcoal computer.screen.width computer.screen.height ::
+  (words palette.white (Debug.toString model) |> move 0 (computer.screen.top - 20)) ::
+  mousePositionText computer ::
+  (model.vertices
+    |> Array.toList
+    |> List.concatMap (\(vi, tos) -> tos |> List.map (\to -> (vi, model.vertices
+      |> Array.get to
+      |> Maybe.withDefault ((0, 0), [])
+      |> Tuple.first
+    ))) -- TODO: show error instead
+    |> List.map (\(from, to) -> path palette.black [from, to])) ++
+  (model.vertices
+    |> Array.map Tuple.first
+    |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y)
+    |> Array.toList)
 
 mousePositionText : Computer -> Shape
 mousePositionText computer =
@@ -80,17 +81,52 @@ myUpdate computer model =
   let
     newMouseState = updateMouseState computer.mouse model.mouse
     newIdx = case (model.mouse, newMouseState) of
-      (Up, Down) -> chooseVertex model.vertices (computer.mouse.x, computer.mouse.y)
+      (Up, Down) -> chooseVertex (model.vertices |> Array.map Tuple.first |> Array.toList |> List.indexedMap Tuple.pair) (computer.mouse.x, computer.mouse.y)
       (Down, Up) -> Nothing
       _ -> model.heldVertexIdx
-    newVertices = case newIdx of
-      Just i -> Dict.insert i (computer.mouse.x, computer.mouse.y) model.vertices
-      Nothing -> model.vertices
+    totalVertices = Array.length model.vertices
+    forces = if
+        computer.keyboard.space
+      then
+        model.vertices
+          |> Array.toList
+          |> List.indexedMap (\i (v, tos) -> ((List.range 0 totalVertices
+            |> List.filter ((/=) i)
+            |> List.filterMap (\j -> Array.get j model.vertices)
+            |> List.map Tuple.first
+            |> List.map (\to ->
+              let
+                dv = minus to v
+                coeff = -attractionG / (dist to v) / 2.8
+              in
+                multiply coeff dv)
+            ), v, tos))
+          |> List.map (\(fs, v, tos) -> fs ++ (tos
+            |> List.filterMap (\j -> Array.get j model.vertices)
+            |> List.map Tuple.first
+            |> List.map (\to ->
+              let
+                dv = minus to v
+                coeff = attractionG / (dist to v)
+              in
+                multiply coeff dv))
+            )
+          |> List.map (\fs -> List.foldl (\(a, b) (c, d) -> (a + c, b + d)) (0, 0) fs)
+      else
+        List.map (\_ -> (0, 0)) (List.range 0 totalVertices)
+    movedVertices = model.vertices
+      |> Array.toList
+      |> List.map2 (\(fx, fy) ((vx, vy), tos) -> ((vx + fx, vy + fy), tos)) forces
+      |> Array.fromList
+    updateHeldVertex vertices = case newIdx of
+      Just i -> case Array.get i vertices of
+        Just (_, tos) -> Array.set i ((computer.mouse.x, computer.mouse.y), tos) vertices
+        _ -> vertices
+      Nothing -> vertices
   in {
     mouse = newMouseState,
-    vertices = newVertices,
-    heldVertexIdx = newIdx,
-    edges = model.edges
+    vertices = updateHeldVertex movedVertices,
+    heldVertexIdx = newIdx
     }
 
 updateMouseState : Mouse -> MouseState -> MouseState
@@ -100,20 +136,31 @@ updateMouseState mouse model = case (mouse.down, mouse.click) of
   (_, False) -> model
 
 -- TODO: take closest
-chooseVertex : Dict.Dict VertexIdx Vertex -> (Float, Float) -> Maybe VertexIdx
-chooseVertex vertices (x, y) = vertices
-  |> Dict.filter (\_ (vx, vy) -> ((vx - x) ^ 2 + (vy - y) ^ 2 < vertexRadius ^ 2))
-  |> Dict.toList
+chooseVertex : List (VertexIdx, Vertex) -> (Float, Float) -> Maybe VertexIdx
+chooseVertex vertices pos = vertices
+  |> List.filter (\(_, v) -> ((distSquared v pos) < vertexRadius ^ 2))
   |> List.head
-  |> Maybe.map (\(k, _) -> k)
+  |> Maybe.map Tuple.first
 
 
 
 
 
+type alias Vec2 = (Float, Float)
+distSquared : Vec2 -> Vec2 -> Float
+distSquared (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
 
+dist : Vec2 -> Vec2 -> Float
+dist v w = sqrt (distSquared v w)
 
+plus : Vec2 -> Vec2 -> Vec2
+plus (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 
+minus : Vec2 -> Vec2 -> Vec2
+minus (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
+
+multiply : Float -> Vec2 -> Vec2
+multiply k (x, y) = (x * k, y * k)
 
 
 
@@ -1451,6 +1498,6 @@ renderTransform shape =
   let
     translate = "translate(" ++ String.fromFloat shape.x ++ "," ++ String.fromFloat -shape.y ++ ")"
     scale__ = if shape.scale == 1 then "" else " scale(" ++ String.fromFloat shape.scale ++ ")"
-    angle_ = if shape.alpha == 0 then "" else " rotate(" ++ String.fromFloat -shape.alpha ++ ")"
+    angle_ = if shape.alpha == 0 then "" else " rotate(" ++ String.fromFloat -shape.angle ++ ")"
   in
     translate ++ angle_ ++ scale__
