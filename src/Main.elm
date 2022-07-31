@@ -4,8 +4,7 @@ module Main exposing (
   toXY, spin, moveUp, moveDown, moveLeft, moveRight, scale_, rotate, fade,
   wave, zigzag,
   oval, square, triangle, pentagon, hexagon, octagon, polygon, image, group,
-  lightYellow, yellow, darkYellow, lightOrange, orange, darkOrange, lightBrown, brown, darkBrown, lightGreen, green, darkGreen, lightBlue, blue, darkBlue, lightPurple, purple, darkPurple, lightRed, red, darkRed, lightGrey, grey, darkGrey, lightCharcoal, charcoal, darkCharcoal,
-  rgb
+  palette, rgb
   )
 
 import Debug
@@ -54,18 +53,18 @@ main = game myRender myUpdate initModel
 
 myRender : Computer -> Model -> List Shape
 myRender computer model = [
-  rectangle darkCharcoal computer.screen.width computer.screen.height,
-  words white (Debug.toString model) |> move 0 (computer.screen.top - 20),
+  rectangle palette.darkCharcoal computer.screen.width computer.screen.height,
+  words palette.white (Debug.toString model) |> move 0 (computer.screen.top - 20),
   mousePositionText computer,
   model.edges |> List.concatMap (\(i, j) -> [
     model.vertices |> Dict.get i |> Maybe.withDefault (0, 0), -- TODO: show error instead
     model.vertices |> Dict.get j |> Maybe.withDefault (0, 0)
-    ]) |> path black
+    ]) |> path palette.black
   ]
-  ++ (model.vertices |> Dict.values |> List.map (\(x, y) -> circle darkGrey vertexRadius |> move x y))
+  ++ (model.vertices |> Dict.values |> List.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y))
 
 mousePositionText computer =
-  words white (Debug.toString (computer.mouse.x, computer.mouse.y))
+  words palette.white (Debug.toString (computer.mouse.x, computer.mouse.y))
   |> move (computer.screen.left + 50) (computer.screen.top - 20)
 
 myUpdate : Computer -> Model -> Model
@@ -612,35 +611,32 @@ Notice that in the `update` we use information from the keyboard to update the
 game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
 game viewMemory updateMemory initialMemory =
   let
-    init () =
-      ( Game Events.Visible initialMemory initialComputer
-      , Task.perform GotViewport Dom.getViewport
+    init () = (
+      Game Events.Visible initialMemory initialComputer,
+      Task.perform GotViewport Dom.getViewport
       )
 
-    view (Game _ memory computer) =
-      { title = "Playground"
-      , body = [ render computer.screen (viewMemory computer memory) ]
+    view (Game _ memory computer) = {
+      title = "Playground",
+      body = [render computer.screen (viewMemory computer memory)]
       }
 
-    update msg model =
-      ( gameUpdate updateMemory msg model
-      , Cmd.none
+    update msg model = (
+      gameUpdate updateMemory msg model,
+      Cmd.none
       )
 
     subscriptions (Game visibility _ _) =
       case visibility of
-        Events.Hidden ->
-          Events.onVisibilityChange VisibilityChanged
-
-        Events.Visible ->
-          gameSubscriptions
+        Events.Hidden -> Events.onVisibilityChange VisibilityChanged
+        Events.Visible -> gameSubscriptions
   in
-  Browser.document
-    { init = init
-    , view = view
-    , update = update
-    , subscriptions = subscriptions
-    }
+    Browser.document {
+      init = init,
+      view = view,
+      update = update,
+      subscriptions = subscriptions
+      }
 
 
 initialComputer : Computer
@@ -1217,44 +1213,46 @@ and `darkYellow`.
 -}
 type Color = Hex String | Rgb Int Int Int
 
-lightYellow = Hex "#fce94f"
-yellow = Hex "#edd400"
-darkYellow = Hex "#c4a000"
+palette = {
+  lightYellow = Hex "#fce94f",
+  yellow = Hex "#edd400",
+  darkYellow = Hex "#c4a000",
 
-lightOrange = Hex "#fcaf3e"
-orange = Hex "#f57900"
-darkOrange = Hex "#ce5c00"
+  lightOrange = Hex "#fcaf3e",
+  orange = Hex "#f57900",
+  darkOrange = Hex "#ce5c00",
 
-lightBrown = Hex "#e9b96e"
-brown = Hex "#c17d11"
-darkBrown = Hex "#8f5902"
+  lightBrown = Hex "#e9b96e",
+  brown = Hex "#c17d11",
+  darkBrown = Hex "#8f5902",
 
-lightGreen = Hex "#8ae234"
-green = Hex "#73d216"
-darkGreen = Hex "#4e9a06"
+  lightGreen = Hex "#8ae234",
+  green = Hex "#73d216",
+  darkGreen = Hex "#4e9a06",
 
-lightBlue = Hex "#729fcf"
-blue = Hex "#3465a4"
-darkBlue = Hex "#204a87"
+  lightBlue = Hex "#729fcf",
+  blue = Hex "#3465a4",
+  darkBlue = Hex "#204a87",
 
-lightPurple = Hex "#ad7fa8"
-purple = Hex "#75507b"
-darkPurple = Hex "#5c3566"
+  lightPurple = Hex "#ad7fa8",
+  purple = Hex "#75507b",
+  darkPurple = Hex "#5c3566",
 
-lightRed = Hex "#ef2929"
-red = Hex "#cc0000"
-darkRed = Hex "#a40000"
+  lightRed = Hex "#ef2929",
+  red = Hex "#cc0000",
+  darkRed = Hex "#a40000",
 
-lightGrey = Hex "#eeeeec"
-grey = Hex "#d3d7cf"
-darkGrey = Hex "#babdb6"
+  lightGrey = Hex "#eeeeec",
+  grey = Hex "#d3d7cf",
+  darkGrey = Hex "#babdb6",
 
-lightCharcoal = Hex "#888a85"
-charcoal = Hex "#555753"
-darkCharcoal = Hex "#2e3436"
+  lightCharcoal = Hex "#888a85",
+  charcoal = Hex "#555753",
+  darkCharcoal = Hex "#2e3436",
 
-white = Hex "#FFFFFF"
-black = Hex "#000000"
+  white = Hex "#FFFFFF",
+  black = Hex "#000000"
+  }
 
 -- CUSTOM COLORS
 
