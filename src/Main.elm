@@ -64,16 +64,19 @@ myRender computer model =
   (words palette.white (model.intersections |> Set.size |> Debug.toString) |> move 0 (computer.screen.top - 20)) ::
   (
     let
-      fs = iterEdgesEnds model.vertices
+      listDrop1from3tuple =  (List.map (\(_, x, y) -> (x, y)))
+      (heldEdges, otherEdges) = iterEdgesEnds model.vertices
         |> List.concatMap (\(i, vi, tos) -> tos
           |> List.map (\(j, to) -> (case model.heldVertexIdx of
             Just k -> i == k || j == k
             Nothing -> False,
             vi, to)))
-      (heldEdges, otherEdges) = List.partition (\(p, _, _) -> p) fs
-      f c ls = ls |> List.map (\(_, x, y) -> path c [x, y])
+        |> List.partition (\(p, _, _) -> p)
+        |> Tuple.mapBoth listDrop1from3tuple listDrop1from3tuple
+      colorEdges c ls = ls |> List.map (\(x, y) -> path c [x, y])
     in
-      (f palette.black otherEdges) ++ (f (Hex "#505060") heldEdges)) ++
+      (colorEdges palette.black otherEdges) ++
+      (colorEdges (Hex "#505060") heldEdges)) ++
   (model.vertices
     |> Array.map Tuple.first
     |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y)
