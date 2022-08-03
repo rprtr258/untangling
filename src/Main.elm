@@ -148,26 +148,29 @@ myUpdate computer model =
 intersectEdges : ((Vertex, Vertex), (Vertex, Vertex)) -> Maybe Vec2.Vec2
 intersectEdges ((v1, v2), (w1, w2)) = line_intersection (v1, v2) (w1, w2)
 
-line_intersection ((v1x, v1y), (v2x, v2y)) ((w1x, w1y), (w2x, w2y)) =
+line_intersection (v1, v2) (w1, w2) =
   let
-    denom = (w2y - w1y) * (v2x - v1x) - (w2x - w1x) * (v2y - v1y)
+    dw = Vec2.minus w2 w1
+    dv = Vec2.minus v2 v1
+    dvw1 = Vec2.minus v1 w1
+    denom = Vec2.vectorProduct dv dw
   in
-    if denom == 0 then -- parallel
+    if denom == 0 then -- collinear
       Nothing
     else
       let
-        ua = ((w2x - w1x) * (v1y - w1y) - (w2y - w1y) * (v1x - w1x)) / denom
+        ua = (Vec2.vectorProduct dw dvw1) / denom
       in
         if ua < 0 || ua > 1 then -- out of range
           Nothing
         else
           let
-            ub = ((v2x - v1x) * (v1y - w1y) - (v2y - v1y) * (v1x - w1x)) / denom
+            ub = (Vec2.vectorProduct dv dvw1) / denom
           in
             if ub < 0 || ub > 1 then -- out of range
               Nothing
             else
-              Just (v1x + ua * (v2x - v1x), v1y + ua * (v2y - v1y))
+              Just (Vec2.plus v1 (Vec2.multiply ua dv))
 
 
 
