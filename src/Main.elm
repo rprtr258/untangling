@@ -154,14 +154,14 @@ line_intersection (v1, v2) (w1, w2) =
     dw = Vec2.minus w2 w1
     dv = Vec2.minus v2 v1
     dvw1 = Vec2.minus v1 w1
-    denom = Vec2.vectorProduct dv dw
+    denom = Vec2.cross dv dw
   in
     if denom == 0 then -- collinear
       Nothing
     else
       let
-        ua = (Vec2.vectorProduct dw dvw1) / denom
-        ub = (Vec2.vectorProduct dv dvw1) / denom
+        ua = (Vec2.cross dw dvw1) / denom
+        ub = (Vec2.cross dv dvw1) / denom
       in
         if ua < 0 || ua > 1 || ub < 0 || ub > 1 then -- out of range
           Nothing
