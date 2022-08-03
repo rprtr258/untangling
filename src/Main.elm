@@ -74,6 +74,7 @@ myRender computer model =
     |> Array.map Tuple.first
     |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y)
     |> Array.toList) ++
+  -- TODO: fix lag on moving
   (model.intersections
     |> Set.toList
     |> List.map (\(x, y) -> circle palette.red 5 |> move x y))
@@ -160,17 +161,12 @@ line_intersection (v1, v2) (w1, w2) =
     else
       let
         ua = (Vec2.vectorProduct dw dvw1) / denom
+        ub = (Vec2.vectorProduct dv dvw1) / denom
       in
-        if ua < 0 || ua > 1 then -- out of range
+        if ua < 0 || ua > 1 || ub < 0 || ub > 1 then -- out of range
           Nothing
         else
-          let
-            ub = (Vec2.vectorProduct dv dvw1) / denom
-          in
-            if ub < 0 || ub > 1 then -- out of range
-              Nothing
-            else
-              Just (Vec2.plus v1 (Vec2.multiply ua dv))
+          Just (Vec2.plus v1 (Vec2.multiply ua dv))
 
 
 
