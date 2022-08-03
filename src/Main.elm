@@ -60,6 +60,7 @@ main = game myRender myUpdate initModel
 myRender : Computer -> Model -> List Shape
 myRender computer model =
   rectangle palette.darkCharcoal computer.screen.width computer.screen.height ::
+  -- TODO: replace with toString
   (words palette.white (model.intersections |> Set.size |> Debug.toString) |> move 0 (computer.screen.top - 20)) ::
   -- TODO: highlight edges linked to selected vertex
   (model.vertices
@@ -148,6 +149,8 @@ myUpdate computer model =
 
 intersectEdges : ((Vertex, Vertex), (Vertex, Vertex)) -> Maybe Vec2.Vec2
 intersectEdges ((v1, v2), (w1, w2)) =
+
+line_intersection (v1, v2) (w1, w2) =
   let
     dw = Vec2.minus w2 w1
     dv = Vec2.minus v2 v1
