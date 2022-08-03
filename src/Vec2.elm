@@ -1,4 +1,4 @@
-module Vec2 exposing (Vec2, distSquared, dist, plus, minus, multiply)
+module Vec2 exposing (Vec2, distSquared, dist, plus, minus, multiply, vectorProduct)
 
 type alias Vec2 = (Float, Float)
 
@@ -16,3 +16,6 @@ minus (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
 
 multiply : Float -> Vec2 -> Vec2
 multiply k (x, y) = (x * k, y * k)
+
+vectorProduct : Vec2 -> Vec2 -> Float
+vectorProduct (v1, v2) (w1, w2) = v1 * w2 - v2 * w1

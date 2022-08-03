@@ -20,7 +20,7 @@ import Set
 import Task
 import Time
 import Array
-import Dict
+import Set
 import Vec2
 
 
@@ -31,7 +31,7 @@ type alias Model = {
   mouse: MouseState,
   heldVertexIdx: Maybe VertexIdx,
   vertices: Array.Array (Vertex, List VertexIdx),
-  intersections: Dict.Dict (VertexIdx, VertexIdx) Vec2.Vec2
+  intersections: Set.Set Vec2.Vec2
   }
 
 vertexRadius : Float
@@ -51,7 +51,7 @@ initModel = {
     ((-400, -150), [0, 3])
   ] |> Array.fromList,
   heldVertexIdx = Nothing,
-  intersections = Dict.empty
+  intersections = Set.empty
   }
 
 main : Program () (Game Model) Msg
@@ -60,7 +60,7 @@ main = game myRender myUpdate initModel
 myRender : Computer -> Model -> List Shape
 myRender computer model =
   rectangle palette.darkCharcoal computer.screen.width computer.screen.height ::
-  (words palette.white (Debug.toString model.intersections) |> move 0 (computer.screen.top - 20)) ::
+  (words palette.white (model.intersections |> Set.size |> Debug.toString) |> move 0 (computer.screen.top - 20)) ::
   -- TODO: highlight edges linked to selected vertex
   (model.vertices
     |> Array.toList
@@ -73,12 +73,16 @@ myRender computer model =
   (model.vertices
     |> Array.map Tuple.first
     |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y)
-    |> Array.toList)
+    |> Array.toList) ++
+  (model.intersections
+    |> Set.toList
+    |> List.map (\(x, y) -> circle palette.red 5 |> move x y))
 
 myUpdate : Computer -> Model -> Model
 myUpdate computer model =
   let
     newMouseState = updateMouseState computer.mouse model.mouse
+    -- TODO: 2 modes: down=take, up=release or click=take, click again=release
     newIdx = case (model.mouse, newMouseState) of
       (Up, Down) -> chooseVertex (model.vertices |> Array.map Tuple.first |> Array.toList |> List.indexedMap Tuple.pair) (computer.mouse.x, computer.mouse.y)
       (Down, Up) -> Nothing
@@ -118,12 +122,54 @@ myUpdate computer model =
         Just (_, tos) -> Array.set i ((computer.mouse.x, computer.mouse.y), tos) vertices
         _ -> vertices
       Nothing -> vertices
+    -- TODO: OPTIMIZE: recalculate only moved edges
+    edges = iterEdgesEnds movedVertices
+    newIntersections = edges
+      |> List.concatMap (\ei -> edges |> List.map (\ej -> (ei, ej)))
+      |> List.filter (\((i, _, _), (j, _, _)) -> i < j)
+      |> List.concatMap (\((i, iv, itos), (j, jv, jtos)) -> itos
+        |> List.concatMap (\(ii, iiv) -> jtos
+          |> List.map (\(jj, jjv) -> (((i, ii), (j, jj)), ((iv, iiv), (jv, jjv))))))
+      |> List.filter (\(((i, ii), (j, jj)), _) -> i < ii && j < jj)
+      |> List.filter (\(((i, ii), (j, jj)), _) -> i /= j && ii /= j && i /= jj && ii /= jj)
+      |> List.map Tuple.second
+      |> List.filterMap intersectEdges
+      |> Set.fromList
   in {
     mouse = newMouseState,
     vertices = updateHeldVertex movedVertices,
     heldVertexIdx = newIdx,
-    intersections = model.intersections
+    intersections = newIntersections
     }
+
+
+
+
+intersectEdges : ((Vertex, Vertex), (Vertex, Vertex)) -> Maybe Vec2.Vec2
+intersectEdges ((v1, v2), (w1, w2)) = line_intersection (v1, v2) (w1, w2)
+
+line_intersection ((v1x, v1y), (v2x, v2y)) ((w1x, w1y), (w2x, w2y)) =
+  let
+    denom = (w2y - w1y) * (v2x - v1x) - (w2x - w1x) * (v2y - v1y)
+  in
+    if denom == 0 then -- parallel
+      Nothing
+    else
+      let
+        ua = ((w2x - w1x) * (v1y - w1y) - (w2y - w1y) * (v1x - w1x)) / denom
+      in
+        if ua < 0 || ua > 1 then -- out of range
+          Nothing
+        else
+          let
+            ub = ((v2x - v1x) * (v1y - w1y) - (v2y - v1y) * (v1x - w1x)) / denom
+          in
+            if ub < 0 || ub > 1 then -- out of range
+              Nothing
+            else
+              Just (v1x + ua * (v2x - v1x), v1y + ua * (v2y - v1y))
+
+
 
 
 
