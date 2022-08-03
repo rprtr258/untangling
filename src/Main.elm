@@ -62,12 +62,18 @@ myRender computer model =
   rectangle palette.darkCharcoal computer.screen.width computer.screen.height ::
   -- TODO: replace with toString
   (words palette.white (model.intersections |> Set.size |> Debug.toString) |> move 0 (computer.screen.top - 20)) ::
-  -- TODO: highlight edges linked to selected vertex
-  (iterEdgesEnds model.vertices
-    |> List.concatMap (\(_, vi, tos) -> tos
-      |> List.map Tuple.second
-      |> List.map (\to -> (vi, to)))
-    |> List.map (\(from, to) -> path palette.black [from, to])) ++
+  (
+    let
+      fs = iterEdgesEnds model.vertices
+        |> List.concatMap (\(i, vi, tos) -> tos
+          |> List.map (\(j, to) -> (case model.heldVertexIdx of
+            Just k -> i == k || j == k
+            Nothing -> False,
+            vi, to)))
+      (heldEdges, otherEdges) = List.partition (\(p, _, _) -> p) fs
+      f c ls = ls |> List.map (\(_, x, y) -> path c [x, y])
+    in
+      (f palette.black otherEdges) ++ (f (Hex "#505060") heldEdges)) ++
   (model.vertices
     |> Array.map Tuple.first
     |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y)
