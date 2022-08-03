@@ -63,13 +63,10 @@ myRender computer model =
   -- TODO: replace with toString
   (words palette.white (model.intersections |> Set.size |> Debug.toString) |> move 0 (computer.screen.top - 20)) ::
   -- TODO: highlight edges linked to selected vertex
-  (model.vertices
-    |> Array.toList
-    |> List.concatMap (\(vi, tos) -> tos |> List.map (\to -> (vi, model.vertices
-      |> Array.get to
-      |> Maybe.withDefault ((0, 0), [])
-      |> Tuple.first
-    ))) -- TODO: show error instead
+  (iterEdgesEnds model.vertices
+    |> List.concatMap (\(_, vi, tos) -> tos
+      |> List.map Tuple.second
+      |> List.map (\to -> (vi, to)))
     |> List.map (\(from, to) -> path palette.black [from, to])) ++
   (model.vertices
     |> Array.map Tuple.first
