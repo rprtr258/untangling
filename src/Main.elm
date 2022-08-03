@@ -14,7 +14,7 @@ import Browser.Dom as Dom
 import Browser.Events as Events
 import Html
 import Html.Attributes as H
-import Svg.Attributes exposing (..)
+import Svg.Attributes as SA
 import Json.Decode as Decode
 import Set
 import Task
@@ -1343,12 +1343,12 @@ render screen shapes =
     y = String.fromFloat screen.bottom
   in
     Svg.svg [
-      viewBox (x ++ " " ++ y ++ " " ++ w ++ " " ++ h),
+      SA.viewBox (x ++ " " ++ y ++ " " ++ w ++ " " ++ h),
       H.style "position" "fixed",
       H.style "top" "0",
       H.style "left" "0",
-      width "100%",
-      height "100%"
+      SA.width "100%",
+      SA.height "100%"
       ]
       (List.map renderShape shapes)
 
@@ -1367,7 +1367,7 @@ renderShape shape =
     Image width height src -> renderImage width height src shape
     Words color string -> renderWords color string shape
     Group shapes ->
-      Svg.g (transform (renderTransform shape) :: renderAlpha shape.alpha)
+      Svg.g (SA.transform (renderTransform shape) :: renderAlpha shape.alpha)
         (List.map renderShape shapes)
 
 
@@ -1378,9 +1378,9 @@ renderShape shape =
 renderCircle : Color -> Number -> Shape -> Svg.Svg msg
 renderCircle color radius shape =
   Svg.circle
-    (  r (String.fromFloat radius)
-    :: fill (renderColor color)
-    :: transform (renderTransform shape)
+    (  SA.r (String.fromFloat radius)
+    :: SA.fill (renderColor color)
+    :: SA.transform (renderTransform shape)
     :: renderAlpha shape.alpha
     )
     []
@@ -1389,10 +1389,10 @@ renderCircle color radius shape =
 renderOval : Color -> Number -> Number -> Shape -> Svg.Svg msg
 renderOval color width height shape =
   Svg.ellipse (
-    rx (String.fromFloat (width  / 2)) ::
-    ry (String.fromFloat (height / 2)) ::
-    fill (renderColor color) ::
-    transform (renderTransform shape) ::
+    SA.rx (String.fromFloat (width  / 2)) ::
+    SA.ry (String.fromFloat (height / 2)) ::
+    SA.fill (renderColor color) ::
+    SA.transform (renderTransform shape) ::
     renderAlpha shape.alpha
     )
     []
@@ -1400,10 +1400,10 @@ renderOval color width height shape =
 renderRectangle : Color -> Number -> Number -> Shape -> Svg.Svg msg
 renderRectangle color w h shape =
   Svg.rect (
-    width (String.fromFloat w) ::
-    height (String.fromFloat h) ::
-    fill (renderColor color) ::
-    transform (renderRectTransform w h shape) ::
+    SA.width (String.fromFloat w) ::
+    SA.height (String.fromFloat h) ::
+    SA.fill (renderColor color) ::
+    SA.transform (renderRectTransform w h shape) ::
     renderAlpha shape.alpha
     )
     []
@@ -1415,10 +1415,10 @@ renderRectTransform width height shape =
 renderImage : Number -> Number -> String -> Shape -> Svg.Svg msg
 renderImage w h src shape =
   Svg.image (
-    xlinkHref src ::
-    width (String.fromFloat w) ::
-    height (String.fromFloat h) ::
-    transform (renderRectTransform w h shape) ::
+    SA.xlinkHref src ::
+    SA.width (String.fromFloat w) ::
+    SA.height (String.fromFloat h) ::
+    SA.transform (renderRectTransform w h shape) ::
     renderAlpha shape.alpha
     )
     []
@@ -1426,9 +1426,9 @@ renderImage w h src shape =
 renderNgon : Color -> Int -> Number -> Shape -> Svg.Svg msg
 renderNgon color n radius shape =
   Svg.polygon (
-    points (toNgonPoints 0 n radius "") ::
-    fill (renderColor color) ::
-    transform (renderTransform shape) ::
+    SA.points (toNgonPoints 0 n radius "") ::
+    SA.fill (renderColor color) ::
+    SA.transform (renderTransform shape) ::
     renderAlpha shape.alpha
     )
     []
@@ -1448,9 +1448,9 @@ toNgonPoints i n radius string =
 renderPolygon : Color -> List (Number, Number) -> Shape -> Svg.Svg msg
 renderPolygon color coordinates shape =
   Svg.polygon (
-    points (List.foldl addPoint "" coordinates) ::
-    fill (renderColor color) ::
-    transform (renderTransform shape) ::
+    SA.points (List.foldl addPoint "" coordinates) ::
+    SA.fill (renderColor color) ::
+    SA.transform (renderTransform shape) ::
     renderAlpha shape.alpha
     )
     []
@@ -1458,11 +1458,11 @@ renderPolygon color coordinates shape =
 renderPath : Color -> List (Number, Number) -> Shape -> Svg.Svg msg
 renderPath color coordinates shape =
   Svg.polyline (
-    points (List.foldl addPoint "" coordinates) ::
-    fill "none" ::
-    stroke (renderColor color) ::
-    strokeWidth "10" ::
-    transform (renderTransform shape) ::
+    SA.points (List.foldl addPoint "" coordinates) ::
+    SA.fill "none" ::
+    SA.stroke (renderColor color) ::
+    SA.strokeWidth "10" ::
+    SA.transform (renderTransform shape) ::
     renderAlpha shape.alpha
     )
     []
@@ -1473,10 +1473,10 @@ addPoint (x,y) str = str ++ String.fromFloat x ++ "," ++ String.fromFloat -y ++ 
 renderWords : Color -> String -> Shape -> Svg.Svg msg
 renderWords color string shape =
   Svg.text_ (
-    textAnchor "middle" ::
-    dominantBaseline "central" ::
-    fill (renderColor color) ::
-    transform (renderTransform shape) ::
+    SA.textAnchor "middle" ::
+    SA.dominantBaseline "central" ::
+    SA.fill (renderColor color) ::
+    SA.transform (renderTransform shape) ::
     renderAlpha shape.alpha
     )
     [Svg.text string]
@@ -1491,7 +1491,7 @@ renderAlpha alpha =
   if alpha == 1 then
     []
   else
-    [opacity (String.fromFloat (clamp 0 1 alpha))]
+    [SA.opacity (String.fromFloat (clamp 0 1 alpha))]
 
 renderTransform : Shape -> String
 renderTransform shape =
