@@ -20,15 +20,18 @@ import Set
 import Task
 import Time
 import Array
+import Dict
+import Vec2
 
 
 type MouseState = Up | Down
 type alias VertexIdx = Int
-type alias Vertex = Vec2 -- TODO: coords in [-1, -1] x [1, 1]
+type alias Vertex = Vec2.Vec2 -- TODO: coords in [-1, -1] x [1, 1]
 type alias Model = {
   mouse: MouseState,
   heldVertexIdx: Maybe VertexIdx,
-  vertices: Array.Array (Vertex, List VertexIdx)
+  vertices: Array.Array (Vertex, List VertexIdx),
+  intersections: Dict.Dict (VertexIdx, VertexIdx) Vec2.Vec2
   }
 
 vertexRadius : Float
@@ -47,7 +50,8 @@ initModel = {
     ((450, 150), [4, 2]),
     ((-400, -150), [0, 3])
   ] |> Array.fromList,
-  heldVertexIdx = Nothing
+  heldVertexIdx = Nothing,
+  intersections = Dict.empty
   }
 
 main : Program () (Game Model) Msg
@@ -56,8 +60,8 @@ main = game myRender myUpdate initModel
 myRender : Computer -> Model -> List Shape
 myRender computer model =
   rectangle palette.darkCharcoal computer.screen.width computer.screen.height ::
-  (words palette.white (Debug.toString model) |> move 0 (computer.screen.top - 20)) ::
-  mousePositionText computer ::
+  (words palette.white (Debug.toString model.intersections) |> move 0 (computer.screen.top - 20)) ::
+  -- TODO: highlight edges linked to selected vertex
   (model.vertices
     |> Array.toList
     |> List.concatMap (\(vi, tos) -> tos |> List.map (\to -> (vi, model.vertices
@@ -71,11 +75,6 @@ myRender computer model =
     |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y)
     |> Array.toList)
 
-mousePositionText : Computer -> Shape
-mousePositionText computer =
-  words palette.white (Debug.toString (computer.mouse.x, computer.mouse.y))
-  |> move (computer.screen.left + 50) (computer.screen.top - 20)
-
 myUpdate : Computer -> Model -> Model
 myUpdate computer model =
   let
@@ -88,35 +87,31 @@ myUpdate computer model =
     forces = if
         computer.keyboard.space
       then
-        model.vertices
-          |> Array.toList
-          |> List.indexedMap (\i (v, tos) -> ((List.range 0 totalVertices
-            |> List.filter ((/=) i)
-            |> List.filterMap (\j -> Array.get j model.vertices)
-            |> List.map Tuple.first
-            |> List.map (\to ->
+        iterEdgesEnds model.vertices
+          |> List.map (\(_, iv, tos) -> tos
+            |> List.map Tuple.second
+            |> List.map (\jv ->
               let
-                dv = minus to v
-                coeff = -attractionG / (dist to v) / 2.8
+                dv = Vec2.minus jv iv
+                coeff = attractionG / (Vec2.dist jv iv) / 2.8
               in
-                multiply coeff dv)
-            ), v, tos))
-          |> List.map (\(fs, v, tos) -> fs ++ (tos
-            |> List.filterMap (\j -> Array.get j model.vertices)
-            |> List.map Tuple.first
-            |> List.map (\to ->
-              let
-                dv = minus to v
-                coeff = attractionG / (dist to v)
-              in
-                multiply coeff dv))
-            )
-          |> List.map (\fs -> List.foldl (\(a, b) (c, d) -> (a + c, b + d)) (0, 0) fs)
+                Vec2.multiply coeff dv))
+          -- |> List.map (\(fs, v, tos) -> fs ++ (tos
+          --   |> List.filterMap (\j -> Array.get j model.vertices)
+          --   |> List.map Tuple.first
+          --   |> List.map (\to ->
+          --     let
+          --       dv = minus to v
+          --       coeff = attractionG / (dist to v)
+          --     in
+          --       multiply coeff dv))
+          --   )
+          |> List.map (\fs -> List.foldl Vec2.plus (0, 0) fs)
       else
         List.map (\_ -> (0, 0)) (List.range 0 totalVertices)
     movedVertices = model.vertices
       |> Array.toList
-      |> List.map2 (\(fx, fy) ((vx, vy), tos) -> ((vx + fx, vy + fy), tos)) forces
+      |> List.map2 (\f (v, tos) -> (Vec2.plus f v, tos)) forces
       |> Array.fromList
     updateHeldVertex vertices = case newIdx of
       Just i -> case Array.get i vertices of
@@ -126,8 +121,33 @@ myUpdate computer model =
   in {
     mouse = newMouseState,
     vertices = updateHeldVertex movedVertices,
-    heldVertexIdx = newIdx
+    heldVertexIdx = newIdx,
+    intersections = model.intersections
     }
+
+
+
+
+
+indexedVertices : Array.Array (Vertex, a) -> List (VertexIdx, Vertex)
+indexedVertices vertices = vertices
+  |> Array.toList
+  |> List.indexedMap (\i (v, _) -> (i, v))
+
+iterVerticesPairs : Array.Array (Vertex, a) -> List ((VertexIdx, Vertex), (VertexIdx, Vertex))
+iterVerticesPairs vertices = vertices
+  |> indexedVertices
+  |> List.concatMap (\iv -> vertices
+    |> indexedVertices
+    |> List.map (\jw -> (iv, jw)))
+  |> List.filter (\((i, _), (j, _)) -> (i /= j))
+
+iterEdgesEnds : Array.Array (Vertex, List VertexIdx) -> List (VertexIdx, Vertex, List (VertexIdx, Vertex))
+iterEdgesEnds vertices = vertices
+  |> Array.toList
+  |> List.indexedMap (\i (v, tos) -> (i, v, tos))
+  |> List.map (\(i, iv, itos) -> (i, iv, itos
+    |> List.filterMap (\j -> Maybe.map (\(jv, _) -> (j, jv)) (Array.get j vertices))))
 
 updateMouseState : Mouse -> MouseState -> MouseState
 updateMouseState mouse model = case (mouse.down, mouse.click) of
@@ -138,29 +158,13 @@ updateMouseState mouse model = case (mouse.down, mouse.click) of
 -- TODO: take closest
 chooseVertex : List (VertexIdx, Vertex) -> (Float, Float) -> Maybe VertexIdx
 chooseVertex vertices pos = vertices
-  |> List.filter (\(_, v) -> ((distSquared v pos) < vertexRadius ^ 2))
+  |> List.filter (\(_, v) -> ((Vec2.distSquared v pos) < vertexRadius ^ 2))
   |> List.head
   |> Maybe.map Tuple.first
 
 
 
 
-
-type alias Vec2 = (Float, Float)
-distSquared : Vec2 -> Vec2 -> Float
-distSquared (x1, y1) (x2, y2) = (x1 - x2) ^ 2 + (y1 - y2) ^ 2
-
-dist : Vec2 -> Vec2 -> Float
-dist v w = sqrt (distSquared v w)
-
-plus : Vec2 -> Vec2 -> Vec2
-plus (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
-
-minus : Vec2 -> Vec2 -> Vec2
-minus (x1, y1) (x2, y2) = (x1 - x2, y1 - y2)
-
-multiply : Float -> Vec2 -> Vec2
-multiply k (x, y) = (x * k, y * k)
 
 
 
@@ -1484,7 +1488,11 @@ renderWords color string shape =
 renderColor : Color -> String
 renderColor color = case color of
   Hex str -> str
-  Rgb r g b -> "rgb(" ++ String.fromInt r ++ "," ++ String.fromInt g ++ "," ++ String.fromInt b ++ ")"
+  Rgb r g b -> "rgb(" ++
+    String.fromInt r ++ "," ++
+    String.fromInt g ++ "," ++
+    String.fromInt b ++
+    ")"
 
 renderAlpha : Number -> List (Svg.Attribute msg)
 renderAlpha alpha =
@@ -1497,7 +1505,7 @@ renderTransform : Shape -> String
 renderTransform shape =
   let
     translate = "translate(" ++ String.fromFloat shape.x ++ "," ++ String.fromFloat -shape.y ++ ")"
-    scale__ = if shape.scale == 1 then "" else " scale(" ++ String.fromFloat shape.scale ++ ")"
-    angle_ = if shape.alpha == 0 then "" else " rotate(" ++ String.fromFloat -shape.angle ++ ")"
+    scale = if shape.scale == 1 then "" else " scale(" ++ String.fromFloat shape.scale ++ ")"
+    angle = if shape.alpha == 0 then "" else " rotate(" ++ String.fromFloat -shape.angle ++ ")"
   in
-    translate ++ angle_ ++ scale__
+    translate ++ angle ++ scale
