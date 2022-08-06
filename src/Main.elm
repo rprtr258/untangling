@@ -1,6 +1,5 @@
 module Main exposing (main)
 
-import Debug
 import Set
 import Array
 import Set
@@ -52,10 +51,9 @@ myRender : Engine.Computer -> Model -> List Engine.Shape
 myRender computer model =
   let
     background = Engine.rectangle Engine.palette.darkCharcoal computer.screen.width computer.screen.height
-    -- TODO: replace with toString
     intersectionsText = model.intersections
       |> Set.size
-      |> Debug.toString
+      |> String.fromInt
       |> Engine.words Engine.palette.white
       |> applyTransforms [Engine.move 0 (computer.screen.top - 20)]
     edges = (

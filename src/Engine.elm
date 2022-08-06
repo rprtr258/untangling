@@ -566,15 +566,15 @@ gameSubscriptions = Sub.batch [
 type Game memory = Game Events.Visibility memory Computer
 
 
-type Msg
-  = KeyChanged Bool String
-  | Tick Time.Posix
-  | GotViewport Dom.Viewport
-  | Resized Int Int
-  | VisibilityChanged Events.Visibility
-  | MouseMove Float Float
-  | MouseClick
-  | MouseButton Bool
+type Msg =
+  KeyChanged Bool String |
+  Tick Time.Posix |
+  GotViewport Dom.Viewport |
+  Resized Int Int |
+  VisibilityChanged Events.Visibility |
+  MouseMove Float Float |
+  MouseClick |
+  MouseButton Bool
 
 
 gameUpdate : (Computer -> memory -> memory) -> Msg -> Game memory -> Game memory
