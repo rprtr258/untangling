@@ -72,7 +72,7 @@ myRender computer model =
       |> applyTransforms [move 0 (computer.screen.top - 20)]
     edges = (
       let
-        (heldEdges, otherEdges) = iterEdgesEnds model.vertices
+        (heldEdges, notHeldEdges) = iterEdgesEnds model.vertices
           |> List.concatMap (\(i, vi, tos) -> tos
             |> List.map (\(j, to) -> ((i, j), (vi, to))))
           |> List.partition (\((i, j), _) -> model.heldVertexIdx
@@ -82,7 +82,7 @@ myRender computer model =
           |> List.map Tuple.second
           |> List.map (\(x, y) -> path c [x, y])
       in
-        (colorEdges palette.black otherEdges) ++
+        (colorEdges palette.black notHeldEdges) ++
         (colorEdges (Hex "#505060") heldEdges)
       )
     vertices = model.vertices
