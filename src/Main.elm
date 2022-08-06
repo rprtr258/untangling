@@ -57,11 +57,19 @@ initModel = {
 main : Program () (Game Model) Msg
 main = game myRender myUpdate initModel
 
+applyTransforms : List (Transform -> Transform) -> Shape -> Shape
+applyTransforms fs shape = {shape | transform = (List.foldl (\f g -> \x -> x |> g |> f) identity fs) shape.transform}
+
 myRender : Computer -> Model -> List Shape
 myRender computer model =
   rectangle palette.darkCharcoal computer.screen.width computer.screen.height ::
   -- TODO: replace with toString
-  (words palette.white (model.intersections |> Set.size |> Debug.toString) |> move 0 (computer.screen.top - 20)) ::
+  (model.intersections
+    |> Set.size
+    |> Debug.toString
+    |> words palette.white
+    |> applyTransforms [move 0 (computer.screen.top - 20)]
+    ) ::
   (
     let
       (heldEdges, otherEdges) = iterEdgesEnds model.vertices
@@ -78,12 +86,12 @@ myRender computer model =
       (colorEdges (Hex "#505060") heldEdges)) ++
   (model.vertices
     |> Array.map Tuple.first
-    |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> move x y)
+    |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> applyTransforms [move x y])
     |> Array.toList) ++
   -- TODO: fix lag on moving
   (model.intersections
     |> Set.toList
-    |> List.map (\(x, y) -> circle palette.red 5 |> move x y))
+    |> List.map (\(x, y) -> circle palette.red 5 |> applyTransforms [move x y]))
 
 myUpdate : Computer -> Model -> Model
 myUpdate computer model =
@@ -871,17 +879,16 @@ updateKeyboard isDown key keyboard =
 -- SHAPES
 
 
-{-| Shapes help you make a `picture`, `animation`, or `game`.
-
-Read on to see examples of [`circle`](#circle), [`rectangle`](#rectangle),
-[`words`](#words), [`image`](#image), and many more!
--}
-type alias Shape = {
+type alias Transform = {
   x: Number,
   y: Number,
   angle: Number,
   scale: Number,
-  alpha: Number,
+  alpha: Number
+  }
+
+type alias Shape = {
+  transform: Transform,
   form: Form
   }
 
@@ -909,13 +916,18 @@ the circle.
 circle : Color -> Number -> Shape
 circle color radius = defaultShape (Circle color radius)
 
-defaultShape : Form -> Shape
-defaultShape form = {
+defaultTransform : Transform
+defaultTransform = {
   x = 0,
   y = 0,
   angle = 0,
   scale = 1,
-  alpha = 1,
+  alpha = 1
+  }
+
+defaultShape : Form -> Shape
+defaultShape form = {
+  transform = defaultTransform,
   form = form
   }
 
@@ -1144,8 +1156,8 @@ group shapes = defaultShape (Group shapes)
             |> move -60 -60
         ]
 -}
-move : Number -> Number -> Shape -> Shape
-move dx dy shape = {shape | x = (shape.x + dx), y = (shape.y + dy)}
+move : Number -> Number -> Transform -> Transform
+move dx dy transform = {transform | x = (transform.x + dx), y = (transform.y + dy)}
 
 
 {-| Move a shape up by some number of pixels. So if you wanted to make a tree
@@ -1160,7 +1172,7 @@ you could move the leaves up above the trunk:
             |> moveUp 180
         ]
 -}
-moveUp : Number -> Shape -> Shape
+moveUp : Number -> Transform -> Transform
 moveUp = moveY
 
 
@@ -1177,8 +1189,8 @@ above the ground, you could move the sky up and the ground down:
             |> moveDown 50
         ]
 -}
-moveDown : Number -> Shape -> Shape
-moveDown dy shape = {shape | y = (shape.y - dy)}
+moveDown : Number -> Transform -> Transform
+moveDown dy transform = {transform | y = (transform.y - dy)}
 
 
 {-| Move shapes to the left.
@@ -1192,8 +1204,8 @@ moveDown dy shape = {shape | y = (shape.y - dy)}
             |> moveUp 30
         ]
 -}
-moveLeft : Number -> Shape -> Shape
-moveLeft dx shape = {shape | x = (shape.x - dx)}
+moveLeft : Number -> Transform -> Transform
+moveLeft dx = moveX -dx
 
 
 {-| Move shapes to the right.
@@ -1207,7 +1219,7 @@ moveLeft dx shape = {shape | x = (shape.x - dx)}
             |> moveDown 100
         ]
 -}
-moveRight : Number -> Shape -> Shape
+moveRight : Number -> Transform -> Transform
 moveRight = moveX
 
 
@@ -1226,7 +1238,7 @@ moves back and forth:
 
 Using `moveX` feels a bit nicer here because the movement may be positive or negative.
 -}
-moveX : Number -> Shape -> Shape
+moveX : Number -> Transform -> Transform
 moveX dx shape = {shape | x = (shape.x + dx)}
 
 
@@ -1249,7 +1261,7 @@ grass along the bottom of the screen:
 Using `moveY` feels a bit nicer when setting things relative to the bottom or
 top of the screen, since the values are negative sometimes.
 -}
-moveY : Number -> Shape -> Shape
+moveY : Number -> Transform -> Transform
 moveY dy shape = {shape | y = (shape.y + dy)}
 
 
@@ -1264,7 +1276,7 @@ be larger, you could say:
             |> scale 3
         ]
 -}
-scale_ : Number -> Shape -> Shape
+scale_ : Number -> Transform -> Transform
 scale_ ns shape = {shape | scale = (shape.scale * ns)}
 
 
@@ -1281,7 +1293,7 @@ scale_ ns shape = {shape | scale = (shape.scale * ns)}
 The degrees go **counter-clockwise** to match the direction of the
 [unit circle](https://en.wikipedia.org/wiki/Unit_circle).
 -}
-rotate : Number -> Shape -> Shape
+rotate : Number -> Transform -> Transform
 rotate da shape = {shape | angle = (shape.angle + da)}
 
 
@@ -1302,7 +1314,7 @@ invisible. Here is a shape that fades in and out:
 The number has to be between `0` and `1`, where `0` is totally transparent
 and `1` is completely solid.
 -}
-fade : Number -> Shape -> Shape
+fade : Number -> Transform -> Transform
 fade o shape = {shape | alpha = o}
 
 
@@ -1411,16 +1423,16 @@ render screen shapes =
 renderShape : Shape -> Svg.Svg msg
 renderShape shape =
   case shape.form of
-    Circle color radius -> renderCircle color radius shape
-    Oval color width height -> renderOval color width height shape
-    Rectangle color width height -> renderRectangle color width height shape
-    Ngon color n radius -> renderNgon color n radius shape
-    Polygon color points -> renderPolygon color points shape
-    Path color points -> renderPath color points shape
-    Image width height src -> renderImage width height src shape
-    Words color string -> renderWords color string shape
+    Circle color radius -> renderCircle color radius shape.transform
+    Oval color width height -> renderOval color width height shape.transform
+    Rectangle color width height -> renderRectangle color width height shape.transform
+    Ngon color n radius -> renderNgon color n radius shape.transform
+    Polygon color points -> renderPolygon color points shape.transform
+    Path color points -> renderPath color points shape.transform
+    Image width height src -> renderImage width height src shape.transform
+    Words color string -> renderWords color string shape.transform
     Group shapes ->
-      Svg.g (SA.transform (renderTransform shape) :: renderAlpha shape.alpha)
+      Svg.g (SA.transform (renderTransform shape.transform) :: renderAlpha shape.transform.alpha)
         (List.map renderShape shapes)
 
 
@@ -1428,7 +1440,7 @@ renderShape shape =
 -- RENDER CIRCLE AND OVAL
 
 
-renderCircle : Color -> Number -> Shape -> Svg.Svg msg
+renderCircle : Color -> Number -> Transform -> Svg.Svg msg
 renderCircle color radius shape =
   Svg.circle
     (  SA.r (String.fromFloat radius)
@@ -1439,7 +1451,7 @@ renderCircle color radius shape =
     []
 
 
-renderOval : Color -> Number -> Number -> Shape -> Svg.Svg msg
+renderOval : Color -> Number -> Number -> Transform -> Svg.Svg msg
 renderOval color width height shape =
   Svg.ellipse (
     SA.rx (String.fromFloat (width  / 2)) ::
@@ -1450,7 +1462,7 @@ renderOval color width height shape =
     )
     []
 
-renderRectangle : Color -> Number -> Number -> Shape -> Svg.Svg msg
+renderRectangle : Color -> Number -> Number -> Transform -> Svg.Svg msg
 renderRectangle color w h shape =
   Svg.rect (
     SA.width (String.fromFloat w) ::
@@ -1461,11 +1473,11 @@ renderRectangle color w h shape =
     )
     []
 
-renderRectTransform : Number -> Number -> Shape -> String
+renderRectTransform : Number -> Number -> Transform -> String
 renderRectTransform width height shape =
   renderTransform shape ++ " translate(" ++ String.fromFloat (-width/2) ++ "," ++ String.fromFloat (-height/2) ++ ")"
 
-renderImage : Number -> Number -> String -> Shape -> Svg.Svg msg
+renderImage : Number -> Number -> String -> Transform -> Svg.Svg msg
 renderImage w h src shape =
   Svg.image (
     SA.xlinkHref src ::
@@ -1476,7 +1488,7 @@ renderImage w h src shape =
     )
     []
 
-renderNgon : Color -> Int -> Number -> Shape -> Svg.Svg msg
+renderNgon : Color -> Int -> Number -> Transform -> Svg.Svg msg
 renderNgon color n radius shape =
   Svg.polygon (
     SA.points (toNgonPoints 0 n radius "") ::
@@ -1498,7 +1510,7 @@ toNgonPoints i n radius string =
     in
       toNgonPoints (i + 1) n radius (string ++ String.fromFloat x ++ "," ++ String.fromFloat y ++ " ")
 
-renderPolygon : Color -> List (Number, Number) -> Shape -> Svg.Svg msg
+renderPolygon : Color -> List (Number, Number) -> Transform -> Svg.Svg msg
 renderPolygon color coordinates shape =
   Svg.polygon (
     SA.points (List.foldl addPoint "" coordinates) ::
@@ -1508,7 +1520,7 @@ renderPolygon color coordinates shape =
     )
     []
 
-renderPath : Color -> List (Number, Number) -> Shape -> Svg.Svg msg
+renderPath : Color -> List (Number, Number) -> Transform -> Svg.Svg msg
 renderPath color coordinates shape =
   Svg.polyline (
     SA.points (List.foldl addPoint "" coordinates) ::
@@ -1523,7 +1535,7 @@ renderPath color coordinates shape =
 addPoint : (Float, Float) -> String -> String
 addPoint (x,y) str = str ++ String.fromFloat x ++ "," ++ String.fromFloat -y ++ " "
 
-renderWords : Color -> String -> Shape -> Svg.Svg msg
+renderWords : Color -> String -> Transform -> Svg.Svg msg
 renderWords color string shape =
   Svg.text_ (
     SA.textAnchor "middle" ::
@@ -1550,7 +1562,7 @@ renderAlpha alpha =
   else
     [SA.opacity (String.fromFloat (clamp 0 1 alpha))]
 
-renderTransform : Shape -> String
+renderTransform : Transform -> String
 renderTransform shape =
   let
     translate = "translate(" ++ String.fromFloat shape.x ++ "," ++ String.fromFloat -shape.y ++ ")"
