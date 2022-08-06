@@ -41,7 +41,10 @@ attractionG : Float
 attractionG = 10
 
 initModel : Model
-initModel = {
+initModel = generateModel
+
+generateModel : Model
+generateModel = {
   mouse = Up,
   vertices = [
     ((0, 300), [1, 4]),
