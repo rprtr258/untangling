@@ -2,12 +2,14 @@ module Main exposing (main)
 
 import Set
 import Array
-import Set
+import Random
 
 import Vec2
 import Engine
+import Time
 
 
+-- TODO: move to engine
 type MouseState = Up | Down
 type alias VertexIdx = Int
 type alias Vertex = Vec2.Vec2 -- TODO: coords in [-1, -1] x [1, 1]
@@ -25,21 +27,37 @@ attractionG : Float
 attractionG = 10
 
 initModel : Model
-initModel = generateModel
+initModel = generateModel (Random.initialSeed 12345) 5
 
-generateModel : Model
-generateModel = {
-  mouse = Up,
-  vertices = [
-    ((0, 300), [1, 4]),
-    ((400, -150), [2, 0]),
-    ((-400, 150), [3, 1]),
-    ((450, 150), [4, 2]),
-    ((-400, -150), [0, 3])
-  ] |> Array.fromList,
-  heldVertexIdx = Nothing,
-  intersections = Set.empty
-  }
+generateModel : Random.Seed -> Int -> Model
+generateModel r n =
+  let
+    floatGenerator = Random.float -400 400
+    (x0, r1) = (Random.step floatGenerator r)
+    (y0, r2) = (Random.step floatGenerator r1)
+    vertices = n - 1
+      |> List.range 1
+      |> List.foldl (\i (xs, rr) -> (
+        let
+          (x, rr1) = (Random.step floatGenerator rr)
+          (y, rr2) = (Random.step floatGenerator rr1)
+        in
+          (xs ++ [((x, y), [])], rr2))) ([((x0, y0), [])], r2)
+      |> Tuple.first
+    -- vertices = [
+    --   ((0, 300), [1, 4]),
+    --   ((400, -150), [2, 0]),
+    --   ((-400, 150), [3, 1]),
+    --   ((450, 150), [4, 2]),
+    --   ((-400, -150), [0, 3])
+    --   ]
+  in
+    {
+      mouse = Up,
+      vertices = vertices |> Array.fromList,
+      heldVertexIdx = Nothing,
+      intersections = Set.empty
+      }
 
 -- main : Program () (Engine.Game Model) Msg
 main = Engine.game myRender myUpdate initModel
