@@ -62,36 +62,39 @@ applyTransforms fs shape = {shape | transform = (List.foldl (\f g -> \x -> x |> 
 
 myRender : Computer -> Model -> List Shape
 myRender computer model =
-  rectangle palette.darkCharcoal computer.screen.width computer.screen.height ::
-  -- TODO: replace with toString
-  (model.intersections
-    |> Set.size
-    |> Debug.toString
-    |> words palette.white
-    |> applyTransforms [move 0 (computer.screen.top - 20)]
-    ) ::
-  (
-    let
-      (heldEdges, otherEdges) = iterEdgesEnds model.vertices
-        |> List.concatMap (\(i, vi, tos) -> tos
-          |> List.map (\(j, to) -> ((i, j), (vi, to))))
-        |> List.partition (\((i, j), _) -> model.heldVertexIdx
-          |> Maybe.map (\k -> i == k || j == k)
-          |> Maybe.withDefault False)
-      colorEdges c ls = ls
-        |> List.map Tuple.second
-        |> List.map (\(x, y) -> path c [x, y])
-    in
-      (colorEdges palette.black otherEdges) ++
-      (colorEdges (Hex "#505060") heldEdges)) ++
-  (model.vertices
-    |> Array.map Tuple.first
-    |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> applyTransforms [move x y])
-    |> Array.toList) ++
-  -- TODO: fix lag on moving
-  (model.intersections
-    |> Set.toList
-    |> List.map (\(x, y) -> circle palette.red 5 |> applyTransforms [move x y]))
+  let
+    background = rectangle palette.darkCharcoal computer.screen.width computer.screen.height
+    -- TODO: replace with toString
+    intersectionsText = model.intersections
+      |> Set.size
+      |> Debug.toString
+      |> words palette.white
+      |> applyTransforms [move 0 (computer.screen.top - 20)]
+    edges = (
+      let
+        (heldEdges, otherEdges) = iterEdgesEnds model.vertices
+          |> List.concatMap (\(i, vi, tos) -> tos
+            |> List.map (\(j, to) -> ((i, j), (vi, to))))
+          |> List.partition (\((i, j), _) -> model.heldVertexIdx
+            |> Maybe.map (\k -> i == k || j == k)
+            |> Maybe.withDefault False)
+        colorEdges c ls = ls
+          |> List.map Tuple.second
+          |> List.map (\(x, y) -> path c [x, y])
+      in
+        (colorEdges palette.black otherEdges) ++
+        (colorEdges (Hex "#505060") heldEdges)
+      )
+    vertices = model.vertices
+      |> Array.map Tuple.first
+      |> Array.map (\(x, y) -> circle palette.darkGrey vertexRadius |> applyTransforms [move x y])
+      |> Array.toList
+    -- TODO: fix lag on moving
+    intersections = model.intersections
+      |> Set.toList
+      |> List.map (\(x, y) -> circle palette.red 5 |> applyTransforms [move x y])
+  in
+    background :: intersectionsText :: edges ++ vertices ++ intersections
 
 myUpdate : Computer -> Model -> Model
 myUpdate computer model =
