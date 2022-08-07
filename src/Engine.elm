@@ -501,7 +501,7 @@ moves based on the arrow keys:
 Notice that in the `update` we use information from the keyboard to update the
 `x` and `y` values. These building blocks let you make pretty fancy games!
 -}
-game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
+game : (Screen -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
 game viewMemory updateMemory initialMemory =
   let
     init () = (
@@ -511,7 +511,7 @@ game viewMemory updateMemory initialMemory =
 
     view (Game _ memory computer) = {
       title = "Playground",
-      body = [render computer.screen (viewMemory computer memory)]
+      body = [render computer.screen (viewMemory computer.screen memory)]
       }
 
     update msg model = (

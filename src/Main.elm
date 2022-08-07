@@ -83,15 +83,15 @@ main = Engine.game myRender myUpdate initModel
 applyTransforms : List (Engine.Transform -> Engine.Transform) -> Engine.Shape -> Engine.Shape
 applyTransforms fs shape = {shape | transform = (List.foldl (\f g -> \x -> x |> g |> f) identity fs) shape.transform}
 
-myRender : Engine.Computer -> Model -> List Engine.Shape
-myRender computer model =
+myRender : Engine.Screen -> Model -> List Engine.Shape
+myRender screen model =
   let
-    background = Engine.rectangle Engine.palette.darkCharcoal computer.screen.width computer.screen.height
+    background = Engine.rectangle Engine.palette.darkCharcoal screen.width screen.height
     intersectionsText = model.intersections
       |> Set.size
       |> String.fromInt
       |> Engine.words Engine.palette.white
-      |> applyTransforms [Engine.move 0 (computer.screen.top - 20)]
+      |> applyTransforms [Engine.move 0 (screen.top - 20)]
     edges = (
       let
         (heldEdges, notHeldEdges) = iterEdgesEnds model.vertices
