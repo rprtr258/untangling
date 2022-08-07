@@ -6,7 +6,6 @@ import Random
 
 import Vec2
 import Engine
-import Time
 
 
 -- TODO: move to engine
@@ -21,30 +20,48 @@ type alias Model = {
   }
 
 vertexRadius : Float
-vertexRadius = 20
+vertexRadius = 10
 
 attractionG : Float
-attractionG = 10
+attractionG = 4
 
 initModel : Model
-initModel = generateModel (Random.initialSeed 12345) 5
+initModel = generateModel (Random.initialSeed 12345) 20
 
 generateModel : Random.Seed -> Int -> Model
 generateModel r n =
   let
     floatGenerator = Random.float -400 400
+    probGenerator = Random.float 0 1
     (x0, r1) = (Random.step floatGenerator r)
     (y0, r2) = (Random.step floatGenerator r1)
     vertices = n - 1
       |> List.range 1
-      |> List.foldl (\i (xs, rr) ->
+      |> List.foldl (\i (xs, edges, rr) ->
         let
           (x, rr1) = (Random.step floatGenerator rr)
           (y, rr2) = (Random.step floatGenerator rr1)
+          (newEdges, rr3) = i - 1
+            |> List.range 1
+            |> List.foldl (\j (ys, rrr) ->
+              let
+                (p, rrr1) = Random.step probGenerator rrr
+                dys = if p < 0.10 then [j] else []
+              in
+                (ys ++ dys, rrr1)) ([], rr2)
         in
-          (xs ++ [((x, y), List.range 0 (i - 1))], rr2)
-        ) ([((x0, y0), [])], r2)
-      |> Tuple.first
+          (xs ++ [(x, y)], Set.union edges (newEdges
+            |> List.map (\j -> (i, j))
+            |> Set.fromList
+            ) , rr3))
+        ([(x0, y0)], Set.empty, r2)
+      |> (\(positions, edges, _) -> (positions, edges))
+      |> (\(positions, edges) -> positions
+        |> List.indexedMap Tuple.pair
+        |> List.foldl (\(i, v) g -> g ++ [(v, edges
+          |> Set.filter (\(j, k) -> j == i || k == i)
+          |> Set.map (\(j, k) -> if j == i then k else j)
+          |> Set.toList)]) [])
     -- vertices = [
     --   ((0, 300), [1, 4]),
     --   ((400, -150), [2, 0]),
@@ -97,9 +114,9 @@ myRender computer model =
     -- TODO: fix lag on moving
     intersections = model.intersections
       |> Set.toList
-      |> List.map (\(x, y) -> Engine.circle Engine.palette.red 5 |> applyTransforms [Engine.move x y])
+      |> List.map (\(x, y) -> Engine.circle Engine.palette.red 3 |> applyTransforms [Engine.move x y])
   in
-    background :: intersectionsText :: edges ++ vertices ++ intersections
+    background :: edges ++ vertices ++ intersections ++ [intersectionsText]
 
 myUpdate : Engine.Computer -> Model -> Model
 myUpdate computer model =
@@ -112,28 +129,31 @@ myUpdate computer model =
       _ -> model.heldVertexIdx
     totalVertices = Array.length model.vertices
     forces = if
-        computer.keyboard.space
+        computer.keyboard.space || computer.keyboard.enter
       then
-        iterEdgesEnds model.vertices
-          |> List.map (\(_, iv, tos) -> tos
-            |> List.map Tuple.second
-            |> List.map (\jv ->
-              let
-                dv = Vec2.minus jv iv
-                coeff = attractionG / (Vec2.dist jv iv) / 2.8
-              in
-                Vec2.multiply coeff dv))
-          -- |> List.map (\(fs, v, tos) -> fs ++ (tos
-          --   |> List.filterMap (\j -> Array.get j model.vertices)
-          --   |> List.map Tuple.first
-          --   |> List.map (\to ->
-          --     let
-          --       dv = minus to v
-          --       coeff = attractionG / (dist to v)
-          --     in
-          --       multiply coeff dv))
-          --   )
-          |> List.map (\fs -> List.foldl Vec2.plus (0, 0) fs)
+        let
+          g = if computer.keyboard.space then attractionG else -attractionG
+        in
+          iterEdgesEnds model.vertices
+            |> List.map (\(_, iv, tos) -> tos
+              |> List.map Tuple.second
+              |> List.map (\jv ->
+                let
+                  dv = Vec2.minus jv iv
+                  coeff = g / (Vec2.dist jv iv) / 2.8
+                in
+                  Vec2.multiply coeff dv))
+            -- |> List.map (\(fs, v, tos) -> fs ++ (tos
+            --   |> List.filterMap (\j -> Array.get j model.vertices)
+            --   |> List.map Tuple.first
+            --   |> List.map (\to ->
+            --     let
+            --       dv = minus to v
+            --       coeff = attractionG / (dist to v)
+            --     in
+            --       multiply coeff dv))
+            --   )
+            |> List.map (\fs -> List.foldl Vec2.plus (0, 0) fs)
       else
         List.map (\_ -> (0, 0)) (List.range 0 totalVertices)
     movedVertices = model.vertices

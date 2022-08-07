@@ -1303,7 +1303,7 @@ renderPath color coordinates shape =
     SA.points (List.foldl addPoint "" coordinates) ::
     SA.fill "none" ::
     SA.stroke (renderColor color) ::
-    SA.strokeWidth "10" ::
+    SA.strokeWidth "3" ::
     SA.transform (renderTransform shape) ::
     renderAlpha shape.alpha
     )
