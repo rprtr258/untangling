@@ -37,12 +37,13 @@ generateModel r n =
     (y0, r2) = (Random.step floatGenerator r1)
     vertices = n - 1
       |> List.range 1
-      |> List.foldl (\i (xs, rr) -> (
+      |> List.foldl (\i (xs, rr) ->
         let
           (x, rr1) = (Random.step floatGenerator rr)
           (y, rr2) = (Random.step floatGenerator rr1)
         in
-          (xs ++ [((x, y), [])], rr2))) ([((x0, y0), [])], r2)
+          (xs ++ [((x, y), List.range 0 (i - 1))], rr2)
+        ) ([((x0, y0), [])], r2)
       |> Tuple.first
     -- vertices = [
     --   ((0, 300), [1, 4]),
