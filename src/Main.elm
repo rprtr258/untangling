@@ -73,6 +73,7 @@ generateModel r n =
             |> List.concatMap (\(from, tos) -> tos |> List.map (\to -> Graph.Edge from to ()))
         in
           Graph.fromNodesAndEdges vs es)
+      |> Graph.symmetricClosure (\_ _ _ _ -> ())
     -- vertices = [
     --   ((0, 300), [1, 4]),
     --   ((400, -150), [2, 0]),
@@ -187,23 +188,31 @@ myUpdate computer model =
           Graph.update i f model.graph
       Nothing -> model.graph
     -- -- TODO: OPTIMIZE: recalculate only moved edges
-    -- edges = iterEdgesEnds movedVertices
-    -- newIntersections = edges
-    --   |> List.concatMap (\ei -> edges |> List.map (\ej -> (ei, ej)))
-    --   |> List.filter (\((i, _, _), (j, _, _)) -> i < j)
-    --   |> List.concatMap (\((i, iv, itos), (j, jv, jtos)) -> itos
-    --     |> List.concatMap (\(ii, iiv) -> jtos
-    --       |> List.map (\(jj, jjv) -> (((i, ii), (j, jj)), ((iv, iiv), (jv, jjv))))))
-    --   |> List.filter (\(((i, ii), (j, jj)), _) -> i < ii && j < jj)
-    --   |> List.filter (\(((i, ii), (j, jj)), _) -> i /= j && ii /= j && i /= jj && ii /= jj)
-    --   |> List.map Tuple.second
-    --   |> List.filterMap intersectEdges
-    --   |> Set.fromList
+    edges = model.graph
+      |> Graph.edges
+      |> List.filterMap (\{from, to} ->
+        if from >= to then Nothing else
+        let
+          fromV = model.graph |> Graph.get from |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+          toV = model.graph |> Graph.get to |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+        in
+          Just (fromV, toV)
+      )
+      -- |> List.concatMap (\((i, iv, itos), (j, jv, jtos)) -> itos
+      --   |> List.concatMap (\(ii, iiv) -> jtos
+      --     |> List.map (\(jj, jjv) -> (((i, ii), (j, jj)), ((iv, iiv), (jv, jjv))))))
+      -- |> List.filter (\(((i, ii), (j, jj)), _) -> i < ii && j < jj)
+      -- |> List.filter (\(((i, ii), (j, jj)), _) -> i /= j && ii /= j && i /= jj && ii /= jj)
+      -- |> List.map Tuple.second
+    newIntersections = edges
+      |> List.concatMap (\e -> List.map (\o -> (e, o)) edges)
+      |> List.filterMap intersectEdges
+      |> Set.fromList
   in {
     mouse = newMouseState,
     graph = movedVertices,
     heldVertexIdx = newIdx,
-    intersections = model.intersections --newIntersections
+    intersections = newIntersections
     }
 
 
