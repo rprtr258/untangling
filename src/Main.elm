@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Set
-import Array
 
 import Random
 import Graph
@@ -13,11 +12,36 @@ import Engine
 -- TODO: move to engine
 type MouseState = Up | Down
 type alias Vertex = Vec2.Vec2 -- TODO: coords in [-1, -1] x [1, 1]
+type alias IntersectionTuple = (
+  (Graph.NodeId, Graph.NodeId),
+  (Graph.NodeId, Graph.NodeId),
+  Vec2.Vec2
+  )
+type alias Intersection = {
+  from1: Graph.NodeId,
+  to1: Graph.NodeId,
+  from2: Graph.NodeId,
+  to2: Graph.NodeId,
+  pt: Vec2.Vec2
+  }
+
+intersectionFromTuple : IntersectionTuple -> Intersection
+intersectionFromTuple ((from1, to1), (from2, to2), pt) = {
+  from1 = from1,
+  to1 = to1,
+  from2 = from2,
+  to2 = to2,
+  pt = pt
+  }
+
+intersectionToTuple : Intersection -> IntersectionTuple
+intersectionToTuple {from1, to1, from2, to2, pt} = ((from1, to1), (from2, to2), pt)
+
 type alias Model = {
   mouse: MouseState,
   heldVertexIdx: Maybe Graph.NodeId,
   graph: Graph.Graph Vertex (),
-  intersections: Set.Set Vec2.Vec2
+  intersections: Set.Set IntersectionTuple
   }
 
 vertexRadius : Float
@@ -74,6 +98,32 @@ generateModel r n =
         in
           Graph.fromNodesAndEdges vs es)
       |> Graph.symmetricClosure (\_ _ _ _ -> ())
+    edges2 = graph
+      |> Graph.edges
+      |> List.filterMap (\{from, to} ->
+        if from >= to then Nothing else
+        let
+          fromV = graph |> Graph.get from |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+          toV = graph |> Graph.get to |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+        in
+          Just ((from, to), (fromV, toV))
+      )
+      -- |> List.concatMap (\((i, iv, itos), (j, jv, jtos)) -> itos
+      --   |> List.concatMap (\(ii, iiv) -> jtos
+      --     |> List.map (\(jj, jjv) -> (((i, ii), (j, jj)), ((iv, iiv), (jv, jjv))))))
+      -- |> List.filter (\(((i, ii), (j, jj)), _) -> i < ii && j < jj)
+      -- |> List.filter (\(((i, ii), (j, jj)), _) -> i /= j && ii /= j && i /= jj && ii /= jj)
+      -- |> List.map Tuple.second
+    intersections = edges2
+      |> List.concatMap (\e -> List.map (\o -> (e, o)) edges2)
+      |> List.filterMap (\(((from1, to1), e1), ((from2, to2), e2)) -> (intersectEdges e1 e2) |> Maybe.map (\pt -> intersectionToTuple {
+        from1 = from1,
+        to1 = to1,
+        from2 = from2,
+        to2 = to2,
+        pt = pt
+        }))
+      |> Set.fromList
     -- vertices = [
     --   ((0, 300), [1, 4]),
     --   ((400, -150), [2, 0]),
@@ -86,7 +136,7 @@ generateModel r n =
       mouse = Up,
       graph = graph,
       heldVertexIdx = Nothing,
-      intersections = Set.empty
+      intersections = intersections
       }
 
 -- main : Program () (Engine.Game Model) Msg
@@ -131,6 +181,8 @@ myRender screen model =
     -- TODO: fix lag on moving
     intersections = model.intersections
       |> Set.toList
+      |> List.map intersectionFromTuple
+      |> List.map .pt
       |> List.map (\(x, y) -> Engine.circle Engine.palette.red 3 |> applyTransforms [Engine.move x y])
   in
     background :: edges ++ vertices ++ intersections ++ [intersectionsText]
@@ -187,27 +239,10 @@ myUpdate computer model =
         in
           Graph.update i f model.graph
       Nothing -> model.graph
-    -- -- TODO: OPTIMIZE: recalculate only moved edges
-    edges = model.graph
-      |> Graph.edges
-      |> List.filterMap (\{from, to} ->
-        if from >= to then Nothing else
-        let
-          fromV = model.graph |> Graph.get from |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
-          toV = model.graph |> Graph.get to |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
-        in
-          Just (fromV, toV)
-      )
-      -- |> List.concatMap (\((i, iv, itos), (j, jv, jtos)) -> itos
-      --   |> List.concatMap (\(ii, iiv) -> jtos
-      --     |> List.map (\(jj, jjv) -> (((i, ii), (j, jj)), ((iv, iiv), (jv, jjv))))))
-      -- |> List.filter (\(((i, ii), (j, jj)), _) -> i < ii && j < jj)
-      -- |> List.filter (\(((i, ii), (j, jj)), _) -> i /= j && ii /= j && i /= jj && ii /= jj)
-      -- |> List.map Tuple.second
-    newIntersections = edges
-      |> List.concatMap (\e -> List.map (\o -> (e, o)) edges)
-      |> List.filterMap intersectEdges
-      |> Set.fromList
+    newIntersections = case newIdx of
+      Just i -> model.intersections
+        |> Set.filter (\((a, b), (c, d), _) -> a /= i && b /= i && c /= i && d /= i)
+      Nothing -> model.intersections
   in {
     mouse = newMouseState,
     graph = movedVertices,
@@ -218,8 +253,8 @@ myUpdate computer model =
 
 
 
-intersectEdges : ((Vertex, Vertex), (Vertex, Vertex)) -> Maybe Vec2.Vec2
-intersectEdges ((v1, v2), (w1, w2)) =
+intersectEdges : (Vertex, Vertex) -> (Vertex, Vertex) -> Maybe Vec2.Vec2
+intersectEdges (v1, v2) (w1, w2) =
   let
     dw = Vec2.minus w2 w1
     dv = Vec2.minus v2 v1
@@ -244,26 +279,6 @@ intersectEdges ((v1, v2), (w1, w2)) =
 
 
 
-indexedVertices : Array.Array (Vertex, a) -> List (Graph.NodeId, Vertex)
-indexedVertices vertices = vertices
-  |> Array.toList
-  |> List.indexedMap (\i (v, _) -> (i, v))
-
-iterVerticesPairs : Array.Array (Vertex, a) -> List ((Graph.NodeId, Vertex), (Graph.NodeId, Vertex))
-iterVerticesPairs vertices = vertices
-  |> indexedVertices
-  |> List.concatMap (\iv -> vertices
-    |> indexedVertices
-    |> List.map (\jw -> (iv, jw)))
-  |> List.filter (\((i, _), (j, _)) -> (i /= j))
-
-iterEdgesEnds : Array.Array (Vertex, List Graph.NodeId) -> List (Graph.NodeId, Vertex, List (Graph.NodeId, Vertex))
-iterEdgesEnds vertices = vertices
-  |> Array.toList
-  |> List.indexedMap (\i (v, tos) -> (i, v, tos))
-  |> List.map (\(i, iv, itos) -> (i, iv, itos
-    |> List.filterMap (\j -> Maybe.map (\(jv, _) -> (j, jv)) (Array.get j vertices))))
-
 updateMouseState : Engine.Mouse -> MouseState -> MouseState
 updateMouseState mouse model = case (mouse.down, mouse.click) of
   (True, _) -> Down
@@ -271,24 +286,8 @@ updateMouseState mouse model = case (mouse.down, mouse.click) of
   (_, False) -> model
 
 -- TODO: take closest
-chooseVertex : List (Graph.NodeId, Vertex) -> (Float, Float) -> Maybe Graph.NodeId
+chooseVertex : List (Graph.NodeId, Vertex) -> Vec2.Vec2 -> Maybe Graph.NodeId
 chooseVertex vertices pos = vertices
   |> List.filter (\(_, v) -> ((Vec2.distSquared v pos) < vertexRadius ^ 2))
   |> List.head
   |> Maybe.map Tuple.first
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
