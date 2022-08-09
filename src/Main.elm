@@ -2,7 +2,9 @@ module Main exposing (main)
 
 import Set
 import Array
+
 import Random
+import Graph
 
 import Vec2
 import Engine
@@ -10,12 +12,11 @@ import Engine
 
 -- TODO: move to engine
 type MouseState = Up | Down
-type alias VertexIdx = Int
 type alias Vertex = Vec2.Vec2 -- TODO: coords in [-1, -1] x [1, 1]
 type alias Model = {
   mouse: MouseState,
-  heldVertexIdx: Maybe VertexIdx,
-  vertices: Array.Array (Vertex, List VertexIdx),
+  heldVertexIdx: Maybe Graph.NodeId,
+  graph: Graph.Graph Vertex (),
   intersections: Set.Set Vec2.Vec2
   }
 
@@ -35,7 +36,7 @@ generateModel r n =
     probGenerator = Random.float 0 1
     (x0, r1) = (Random.step floatGenerator r)
     (y0, r2) = (Random.step floatGenerator r1)
-    vertices = n - 1
+    graph = n - 1
       |> List.range 1
       |> List.foldl (\i (xs, edges, rr) ->
         let
@@ -62,6 +63,16 @@ generateModel r n =
           |> Set.filter (\(j, k) -> j == i || k == i)
           |> Set.map (\(j, k) -> if j == i then k else j)
           |> Set.toList)]) [])
+      |> (\xs ->
+        let
+          vs = xs
+            |> List.map Tuple.first
+            |> List.indexedMap Graph.Node
+          es = xs
+            |> List.indexedMap (\i (_, tos) -> (i, tos))
+            |> List.concatMap (\(from, tos) -> tos |> List.map (\to -> Graph.Edge from to ()))
+        in
+          Graph.fromNodesAndEdges vs es)
     -- vertices = [
     --   ((0, 300), [1, 4]),
     --   ((400, -150), [2, 0]),
@@ -72,7 +83,7 @@ generateModel r n =
   in
     {
       mouse = Up,
-      vertices = vertices |> Array.fromList,
+      graph = graph,
       heldVertexIdx = Nothing,
       intersections = Set.empty
       }
@@ -94,23 +105,28 @@ myRender screen model =
       |> applyTransforms [Engine.move 0 (screen.top - 20)]
     edges = (
       let
-        (heldEdges, notHeldEdges) = iterEdgesEnds model.vertices
-          |> List.concatMap (\(i, vi, tos) -> tos
-            |> List.map (\(j, to) -> ((i, j), (vi, to))))
-          |> List.partition (\((i, j), _) -> model.heldVertexIdx
-            |> Maybe.map (\k -> i == k || j == k)
-            |> Maybe.withDefault False)
+        (heldEdges, notHeldEdges) = case model.heldVertexIdx of
+          Maybe.Just idx -> model.graph
+            |> Graph.edges
+            |> List.partition (\{from, to} -> from == idx || to == idx)
+          Nothing -> ([], Graph.edges model.graph)
         colorEdges c ls = ls
-          |> List.map Tuple.second
+          |> List.map (\{from, to} ->
+            let
+              fromV = model.graph |> Graph.get from |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+              toV = model.graph |> Graph.get to |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+              -- Maybe.andThen (Maybe.map) fromV
+            in
+              (fromV, toV))
           |> List.map (\(x, y) -> Engine.path c [x, y])
-      in
-        (colorEdges Engine.palette.black notHeldEdges) ++
-        (colorEdges (Engine.Hex "#505060") heldEdges)
+        in
+          (colorEdges Engine.palette.black notHeldEdges) ++
+            (colorEdges (Engine.Hex "#505060") heldEdges)
       )
-    vertices = model.vertices
-      |> Array.map Tuple.first
-      |> Array.map (\(x, y) -> Engine.circle Engine.palette.darkGrey vertexRadius |> applyTransforms [Engine.move x y])
-      |> Array.toList
+    vertices = model.graph
+      |> Graph.nodes
+      |> List.map .label
+      |> List.map (\(x, y) -> Engine.circle Engine.palette.darkGrey vertexRadius |> applyTransforms [Engine.move x y])
     -- TODO: fix lag on moving
     intersections = model.intersections
       |> Set.toList
@@ -124,65 +140,70 @@ myUpdate computer model =
     newMouseState = updateMouseState computer.mouse model.mouse
     -- TODO: 2 modes: down=take, up=release or click=take, click again=release
     newIdx = case (model.mouse, newMouseState) of
-      (Up, Down) -> chooseVertex (model.vertices |> Array.map Tuple.first |> Array.toList |> List.indexedMap Tuple.pair) (computer.mouse.x, computer.mouse.y)
+      (Up, Down) -> chooseVertex (model.graph |> Graph.nodes |> List.map (\{id, label} -> (id, label))) (computer.mouse.x, computer.mouse.y)
       (Down, Up) -> Nothing
       _ -> model.heldVertexIdx
-    totalVertices = Array.length model.vertices
-    forces = if
-        computer.keyboard.space || computer.keyboard.enter
-      then
+    totalVertices = Graph.size model.graph
+    -- forces = if
+    --     computer.keyboard.space || computer.keyboard.enter
+    --   then
+    --     let
+    --       g = if computer.keyboard.space then attractionG else -attractionG
+    --     in
+    --       []
+    --       -- model.graph
+    --       --   |> Graph.edges
+    --       --   |> List.map (\(_, iv, tos) -> tos
+    --       --     |> List.map Tuple.second
+    --       --     |> List.map (\jv ->
+    --       --       let
+    --       --         dv = Vec2.minus jv iv
+    --       --         coeff = g / (Vec2.dist jv iv) / 2.8
+    --       --       in
+    --       --         Vec2.multiply coeff dv))
+    --         -- |> List.map (\(fs, v, tos) -> fs ++ (tos
+    --         --   |> List.filterMap (\j -> Array.get j model.vertices)
+    --         --   |> List.map Tuple.first
+    --         --   |> List.map (\to ->
+    --         --     let
+    --         --       dv = minus to v
+    --         --       coeff = attractionG / (dist to v)
+    --         --     in
+    --         --       multiply coeff dv))
+    --         --   )
+    --         |> List.map (\fs -> List.foldl Vec2.plus (0, 0) fs)
+    --   else
+    --     List.map (\_ -> (0, 0)) (List.range 0 totalVertices)
+    -- movedVertices = model.graph
+      -- |> Graph.mapNodes (\
+      -- |> List.map2 (\f (v, tos) -> (Vec2.plus f v, tos)) forces
+      -- |> Array.fromList
+    movedVertices = case newIdx of
+      Just i ->
         let
-          g = if computer.keyboard.space then attractionG else -attractionG
+          g ctx = Graph.NodeContext (Graph.Node i (computer.mouse.x, computer.mouse.y)) ctx.incoming ctx.outgoing
+          f = Maybe.map g
         in
-          iterEdgesEnds model.vertices
-            |> List.map (\(_, iv, tos) -> tos
-              |> List.map Tuple.second
-              |> List.map (\jv ->
-                let
-                  dv = Vec2.minus jv iv
-                  coeff = g / (Vec2.dist jv iv) / 2.8
-                in
-                  Vec2.multiply coeff dv))
-            -- |> List.map (\(fs, v, tos) -> fs ++ (tos
-            --   |> List.filterMap (\j -> Array.get j model.vertices)
-            --   |> List.map Tuple.first
-            --   |> List.map (\to ->
-            --     let
-            --       dv = minus to v
-            --       coeff = attractionG / (dist to v)
-            --     in
-            --       multiply coeff dv))
-            --   )
-            |> List.map (\fs -> List.foldl Vec2.plus (0, 0) fs)
-      else
-        List.map (\_ -> (0, 0)) (List.range 0 totalVertices)
-    movedVertices = model.vertices
-      |> Array.toList
-      |> List.map2 (\f (v, tos) -> (Vec2.plus f v, tos)) forces
-      |> Array.fromList
-    updateHeldVertex vertices = case newIdx of
-      Just i -> case Array.get i vertices of
-        Just (_, tos) -> Array.set i ((computer.mouse.x, computer.mouse.y), tos) vertices
-        _ -> vertices
-      Nothing -> vertices
-    -- TODO: OPTIMIZE: recalculate only moved edges
-    edges = iterEdgesEnds movedVertices
-    newIntersections = edges
-      |> List.concatMap (\ei -> edges |> List.map (\ej -> (ei, ej)))
-      |> List.filter (\((i, _, _), (j, _, _)) -> i < j)
-      |> List.concatMap (\((i, iv, itos), (j, jv, jtos)) -> itos
-        |> List.concatMap (\(ii, iiv) -> jtos
-          |> List.map (\(jj, jjv) -> (((i, ii), (j, jj)), ((iv, iiv), (jv, jjv))))))
-      |> List.filter (\(((i, ii), (j, jj)), _) -> i < ii && j < jj)
-      |> List.filter (\(((i, ii), (j, jj)), _) -> i /= j && ii /= j && i /= jj && ii /= jj)
-      |> List.map Tuple.second
-      |> List.filterMap intersectEdges
-      |> Set.fromList
+          Graph.update i f model.graph
+      Nothing -> model.graph
+    -- -- TODO: OPTIMIZE: recalculate only moved edges
+    -- edges = iterEdgesEnds movedVertices
+    -- newIntersections = edges
+    --   |> List.concatMap (\ei -> edges |> List.map (\ej -> (ei, ej)))
+    --   |> List.filter (\((i, _, _), (j, _, _)) -> i < j)
+    --   |> List.concatMap (\((i, iv, itos), (j, jv, jtos)) -> itos
+    --     |> List.concatMap (\(ii, iiv) -> jtos
+    --       |> List.map (\(jj, jjv) -> (((i, ii), (j, jj)), ((iv, iiv), (jv, jjv))))))
+    --   |> List.filter (\(((i, ii), (j, jj)), _) -> i < ii && j < jj)
+    --   |> List.filter (\(((i, ii), (j, jj)), _) -> i /= j && ii /= j && i /= jj && ii /= jj)
+    --   |> List.map Tuple.second
+    --   |> List.filterMap intersectEdges
+    --   |> Set.fromList
   in {
     mouse = newMouseState,
-    vertices = updateHeldVertex movedVertices,
+    graph = movedVertices,
     heldVertexIdx = newIdx,
-    intersections = newIntersections
+    intersections = model.intersections --newIntersections
     }
 
 
@@ -214,12 +235,12 @@ intersectEdges ((v1, v2), (w1, w2)) =
 
 
 
-indexedVertices : Array.Array (Vertex, a) -> List (VertexIdx, Vertex)
+indexedVertices : Array.Array (Vertex, a) -> List (Graph.NodeId, Vertex)
 indexedVertices vertices = vertices
   |> Array.toList
   |> List.indexedMap (\i (v, _) -> (i, v))
 
-iterVerticesPairs : Array.Array (Vertex, a) -> List ((VertexIdx, Vertex), (VertexIdx, Vertex))
+iterVerticesPairs : Array.Array (Vertex, a) -> List ((Graph.NodeId, Vertex), (Graph.NodeId, Vertex))
 iterVerticesPairs vertices = vertices
   |> indexedVertices
   |> List.concatMap (\iv -> vertices
@@ -227,7 +248,7 @@ iterVerticesPairs vertices = vertices
     |> List.map (\jw -> (iv, jw)))
   |> List.filter (\((i, _), (j, _)) -> (i /= j))
 
-iterEdgesEnds : Array.Array (Vertex, List VertexIdx) -> List (VertexIdx, Vertex, List (VertexIdx, Vertex))
+iterEdgesEnds : Array.Array (Vertex, List Graph.NodeId) -> List (Graph.NodeId, Vertex, List (Graph.NodeId, Vertex))
 iterEdgesEnds vertices = vertices
   |> Array.toList
   |> List.indexedMap (\i (v, tos) -> (i, v, tos))
@@ -241,7 +262,7 @@ updateMouseState mouse model = case (mouse.down, mouse.click) of
   (_, False) -> model
 
 -- TODO: take closest
-chooseVertex : List (VertexIdx, Vertex) -> (Float, Float) -> Maybe VertexIdx
+chooseVertex : List (Graph.NodeId, Vertex) -> (Float, Float) -> Maybe Graph.NodeId
 chooseVertex vertices pos = vertices
   |> List.filter (\(_, v) -> ((Vec2.distSquared v pos) < vertexRadius ^ 2))
   |> List.head
