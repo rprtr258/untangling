@@ -444,63 +444,6 @@ animationUpdate msg (Animation v s t as state) = case msg of
 
 
 
--- GAME
-
-
-{-| Create a game!
-
-Once you get comfortable with [`animation`](#animation), you can try making a
-game with the keyboard and mouse. Here is an example of a green square that
-just moves to the right:
-
-    import Playground exposing (..)
-
-    main =
-      game view update 0
-
-    view computer offset =
-      [ square green 40
-          |> moveRight offset
-      ]
-
-    update computer offset =
-      offset + 0.03
-
-This shows the three important parts of a game:
-
-1. `memory` - makes it possible to store information. So with our green square,
-we save the `offset` in memory. It starts out at `0`.
-2. `view` - lets us say which shapes to put on screen. So here we move our
-square right by the `offset` saved in memory.
-3. `update` - lets us update the memory. We are incrementing the `offset` by
-a tiny amount on each frame.
-
-The `update` function is called about 60 times per second, so our little
-changes to `offset` start to add up pretty quickly!
-
-This game is not very fun though! Making a `game` also gives you access to the
-[`Computer`](#Computer), so you can use information about the [`Mouse`](#Mouse)
-and [`Keyboard`](#Keyboard) to make it interactive! So here is a red square that
-moves based on the arrow keys:
-
-    import Playground exposing (..)
-
-    main =
-      game view update (0,0)
-
-    view computer (x,y) =
-      [ square red 40
-          |> move x y
-      ]
-
-    update computer (x,y) =
-      ( x + toX computer.keyboard
-      , y + toY computer.keyboard
-      )
-
-Notice that in the `update` we use information from the keyboard to update the
-`x` and `y` values. These building blocks let you make pretty fancy games!
--}
 game : (Screen -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
 game viewMemory updateMemory initialMemory =
   let
@@ -508,17 +451,14 @@ game viewMemory updateMemory initialMemory =
       Game Events.Visible initialMemory initialComputer,
       Task.perform GotViewport Dom.getViewport
       )
-
     view (Game _ memory computer) = {
       title = "Playground",
       body = [render computer.screen (viewMemory computer.screen memory)]
       }
-
     update msg model = (
       gameUpdate updateMemory msg model,
       Cmd.none
       )
-
     subscriptions (Game visibility _ _) =
       case visibility of
         Events.Hidden -> Events.onVisibilityChange VisibilityChanged
@@ -534,7 +474,12 @@ game viewMemory updateMemory initialMemory =
 
 initialComputer : Computer
 initialComputer = {
-  mouse = Mouse 0 0 False False,
+  mouse = {
+    x = 0,
+    y = 0,
+    down = False,
+    click = False
+    },
   keyboard = emptyKeyboard,
   screen = toScreen 600 600,
   time = Time (Time.millisToPosix 0)
