@@ -108,12 +108,6 @@ generateModel r n =
         in
           Just ((from, to), (fromV, toV))
       )
-      -- |> List.concatMap (\((i, iv, itos), (j, jv, jtos)) -> itos
-      --   |> List.concatMap (\(ii, iiv) -> jtos
-      --     |> List.map (\(jj, jjv) -> (((i, ii), (j, jj)), ((iv, iiv), (jv, jjv))))))
-      -- |> List.filter (\(((i, ii), (j, jj)), _) -> i < ii && j < jj)
-      -- |> List.filter (\(((i, ii), (j, jj)), _) -> i /= j && ii /= j && i /= jj && ii /= jj)
-      -- |> List.map Tuple.second
     intersections = edges2
       |> List.concatMap (\e -> List.map (\o -> (e, o)) edges2)
       |> List.filterMap (\(((from1, to1), e1), ((from2, to2), e2)) -> (intersectEdges e1 e2) |> Maybe.map (\pt -> intersectionToTuple {
@@ -124,13 +118,6 @@ generateModel r n =
         pt = pt
         }))
       |> Set.fromList
-    -- vertices = [
-    --   ((0, 300), [1, 4]),
-    --   ((400, -150), [2, 0]),
-    --   ((-400, 150), [3, 1]),
-    --   ((450, 150), [4, 2]),
-    --   ((-400, -150), [0, 3])
-    --   ]
   in
     {
       mouse = Up,
@@ -239,9 +226,46 @@ myUpdate computer model =
         in
           Graph.update i f model.graph
       Nothing -> model.graph
+    edges2 = model.graph
+      |> Graph.edges
+      |> List.filterMap (\{from, to} ->
+        if from >= to then Nothing else
+        let
+          fromV = model.graph |> Graph.get from |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+          toV = model.graph |> Graph.get to |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+        in
+          Just ((from, to), (fromV, toV))
+      )
+      |> List.filter (\((from, to), _) -> case newIdx of
+        Just idx -> from /= idx && to /= idx
+        Nothing -> False)
+    updatedIntersections = newIdx
+      |> Maybe.andThen (\idx -> Graph.get idx model.graph)
+      |> Maybe.map (\ctx ->
+        let
+          outgoing = Graph.alongOutgoingEdges ctx
+          idx = ctx.node.id
+        in
+          outgoing |> List.map (Tuple.pair idx)
+      )
+      |> Maybe.withDefault []
+      |> List.filterMap (\(from, to) ->
+        if from >= to then Nothing else
+        let
+          fromV = model.graph |> Graph.get from |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+          toV = model.graph |> Graph.get to |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+        in
+          Just ((from, to), (fromV, toV))
+      )
+      |> List.concatMap (\e -> List.map (Tuple.pair e) edges2)
+      |> List.filterMap (\(((from1, to1), e1), ((from2, to2), e2)) -> case intersectEdges e1 e2 of
+        Just i -> Just ((from1, to1), (from2, to2), i)
+        Nothing -> Nothing)
+      |> Set.fromList
     newIntersections = case newIdx of
       Just i -> model.intersections
         |> Set.filter (\((a, b), (c, d), _) -> a /= i && b /= i && c /= i && d /= i)
+        |> Set.union updatedIntersections
       Nothing -> model.intersections
   in {
     mouse = newMouseState,
