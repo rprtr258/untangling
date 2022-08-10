@@ -117,7 +117,7 @@ generateModel r n =
       |> List.map (\((from, to), e) -> Graph.Edge from to e)
     graph2 = Graph.fromNodesAndEdges (Graph.nodes graph) edges2
     intersections = edges2
-      |> List.concatMap (\e -> List.map (\o -> (e, o)) edges2)
+      |> squareList
       |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
       |> List.filter (\(e1, e2) -> (e1.from < e2.from || e1.from == e2.from && e1.to < e2.to))
       |> List.filterMap (\(e1, e2) -> (intersectEdges e1.label e2.label) |> Maybe.map (\pt -> intersectionToTuple {
@@ -135,6 +135,10 @@ generateModel r n =
       heldVertexIdx = Nothing,
       intersections = intersections
       }
+
+squareList : List a -> List (a, a)
+squareList xs = xs
+  |> List.concatMap (\x -> xs |> List.map (Tuple.pair x))
 
 -- main : Program () (Engine.Game Model) Msg
 main = Engine.game myRender myUpdate initModel
@@ -187,7 +191,7 @@ myUpdate computer model =
       (Up, Down) -> chooseVertex (model.graph |> Graph.nodes |> List.map (\{id, label} -> (id, label))) (computer.mouse.x, computer.mouse.y)
       (Down, Up) -> Nothing
       _ -> model.heldVertexIdx
-    totalVertices = Graph.size model.graph
+    -- totalVertices = Graph.size model.graph
     -- forces = if
     --     computer.keyboard.space || computer.keyboard.enter
     --   then
@@ -247,10 +251,10 @@ myUpdate computer model =
       |> Maybe.andThen (\idx -> Graph.get idx movedVertices)
       |> Maybe.map (\ctx ->
         let
-          outgoing = Graph.alongOutgoingEdges ctx
+          tos = (Graph.alongOutgoingEdges ctx) ++ (Graph.alongIncomingEdges ctx)
           idx = ctx.node.id
         in
-          outgoing |> List.map (Tuple.pair idx)
+          tos |> List.map (Tuple.pair idx)
       )
       |> Maybe.withDefault []
       |> List.filterMap (\(from, to) ->
@@ -261,7 +265,7 @@ myUpdate computer model =
           Just ((from, to), (fromV, toV))
       )
       |> List.concatMap (\e -> List.map (Tuple.pair e) edges2)
-      -- |> List.filter (\(((from1, to1), _), ((from2, to2), _)) -> (from1 /= from2 && from1 /= to2 && to1 /= from2 && to1 /= to2))
+      |> List.filter (\(((from1, to1), _), ((from2, to2), _)) -> (from1 /= from2 && from1 /= to2 && to1 /= from2 && to1 /= to2))
       |> List.filterMap (\(((from1, to1), e1), ((from2, to2), e2)) -> Maybe.map (\i -> ((from1, to1), (from2, to2), i)) (intersectEdges e1 e2))
       |> Set.fromList
     newIntersections = case newIdx of
