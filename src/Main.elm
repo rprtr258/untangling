@@ -140,7 +140,7 @@ squareList : List a -> List (a, a)
 squareList xs = xs
   |> List.concatMap (\x -> xs |> List.map (Tuple.pair x))
 
--- main : Program () (Engine.Game Model) Msg
+main : Program () (Engine.Game Model) Engine.Msg
 main = Engine.game myRender myUpdate initModel
 
 applyTransforms : List (Engine.Transform -> Engine.Transform) -> Engine.Shape -> Engine.Shape
@@ -280,9 +280,6 @@ myUpdate computer model =
     intersections = newIntersections
     }
 
-
-
-
 intersectEdges : (Vertex, Vertex) -> (Vertex, Vertex) -> Maybe Vec2.Vec2
 intersectEdges (v1, v2) (w1, w2) =
   let
@@ -302,12 +299,6 @@ intersectEdges (v1, v2) (w1, w2) =
           Nothing
         else
           Just (Vec2.plus v1 (Vec2.multiply ua dv))
-
-
-
-
-
-
 
 updateMouseState : Engine.Mouse -> MouseState -> MouseState
 updateMouseState mouse model = case (mouse.down, mouse.click) of
