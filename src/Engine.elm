@@ -1055,6 +1055,18 @@ and `darkYellow`.
 -}
 type Color = Hex String | Rgb Int Int Int
 
+palette : {
+  lightYellow : Color, yellow : Color, darkYellow : Color,
+  lightOrange : Color, orange : Color, darkOrange : Color,
+  lightBrown : Color, brown : Color, darkBrown : Color,
+  lightGreen : Color, green : Color, darkGreen : Color,
+  lightBlue : Color, blue : Color, darkBlue : Color,
+  lightPurple : Color, purple : Color, darkPurple : Color,
+  lightRed : Color, red : Color, darkRed : Color,
+  lightGrey : Color, grey : Color, darkGrey : Color,
+  lightCharcoal : Color, charcoal : Color, darkCharcoal : Color,
+  white : Color, black : Color
+  }
 palette = {
   lightYellow = Hex "#fce94f",
   yellow = Hex "#edd400",

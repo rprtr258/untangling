@@ -143,8 +143,8 @@ generateGraph r n =
       |> Graph.edges
       |> List.filterMap (\{from, to} ->
         let
-          fromV = graph |> Graph.get from |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
-          toV = graph |> Graph.get to |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
+          fromV = vertices |> IntDict.get from |> Maybe.withDefault (0, 0)
+          toV = vertices |> IntDict.get to |> Maybe.withDefault (0, 0)
         in
           Just ((from, to), (fromV, toV))
       )
