@@ -7,6 +7,7 @@ import Graph
 
 import Vec2
 import Engine
+import IntDict
 
 
 -- TODO: move to engine
@@ -51,21 +52,53 @@ attractionG : Float
 attractionG = 4
 
 initModel : Model
-initModel = generateModel (Random.initialSeed 12345) 20
+initModel =
+  let
+    graph = generateGraph (Random.initialSeed 12345) 20
+    intersections = graph
+      |> Graph.edges
+      |> squareList
+      |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
+      |> List.filter (\(e1, e2) -> (e1.from < e2.from || e1.from == e2.from && e1.to < e2.to))
+      |> List.filterMap (\(e1, e2) -> (intersectEdges e1.label e2.label) |> Maybe.map (\pt -> intersectionToTuple {
+        from1 = e1.from,
+        to1 = e1.to,
+        from2 = e2.from,
+        to2 = e2.to,
+        pt = pt
+        }))
+      |> Set.fromList
+  in {
+    mouse = Up,
+    graph = graph,
+    heldVertexIdx = Nothing,
+    intersections = intersections
+    }
 
-generateModel : Random.Seed -> Int -> Model
-generateModel r n =
+generateGraph : Random.Seed -> Int -> Graph.Graph Vertex (Vertex, Vertex)
+generateGraph r n =
   let
     floatGenerator = Random.float -400 400
+    (vertices, rrrrr) = n
+      |> List.range 1
+      |> List.foldl (\_ (xs, rrr) ->
+        let
+          (x, rr1) = (Random.step floatGenerator rrr)
+          (y, rr2) = (Random.step floatGenerator rr1)
+        in
+          ((x, y) :: xs, rr2)) ([], r)
+      |> (\(xys, rt) ->
+        let
+          ixys = xys
+            |> List.indexedMap Tuple.pair
+            |> IntDict.fromList
+        in
+          (ixys, rt))
     probGenerator = Random.float 0 1
-    (x0, r1) = (Random.step floatGenerator r)
-    (y0, r2) = (Random.step floatGenerator r1)
     graph = n - 1
       |> List.range 1
-      |> List.foldl (\i (xs, edges, rr) ->
+      |> List.foldl (\i (edges, rrrr) ->
         let
-          (x, rr1) = (Random.step floatGenerator rr)
-          (y, rr2) = (Random.step floatGenerator rr1)
           (newEdges, rr3) = i - 1
             |> List.range 1
             |> List.foldl (\j (ys, rrr) ->
@@ -73,18 +106,19 @@ generateModel r n =
                 (p, rrr1) = Random.step probGenerator rrr
                 dys = if p < 0.10 then [j] else []
               in
-                (ys ++ dys, rrr1)) ([], rr2)
-        in
-          (xs ++ [(x, y)], Set.union edges (newEdges
+                (ys ++ dys, rrr1)) ([], rrrr)
+          ss = Set.union edges (newEdges
             |> List.map (Tuple.pair i)
             |> Set.fromList
-            ) , rr3))
-        ([(x0, y0)], Set.empty, r2)
-      |> (\(positions, edges, _) -> (positions, edges))
-      |> (\(positions, edges) ->
+            )
+        in
+          (ss, rr3))
+        (Set.empty, rrrrr)
+      |> Tuple.first
+      |> (\edges ->
         let
           vs : List (Graph.Node Vertex)
-          vs = positions |> List.indexedMap Graph.Node
+          vs = vertices |> IntDict.values |> List.indexedMap Graph.Node
           es : List (Graph.Edge ())
           es = edges |> Set.toList |> List.map (\(from, to) -> Graph.Edge from to ())
         in
@@ -115,26 +149,8 @@ generateModel r n =
           Just ((from, to), (fromV, toV))
       )
       |> List.map (\((from, to), e) -> Graph.Edge from to e)
-    graph2 = Graph.fromNodesAndEdges (Graph.nodes graph) edges2
-    intersections = edges2
-      |> squareList
-      |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
-      |> List.filter (\(e1, e2) -> (e1.from < e2.from || e1.from == e2.from && e1.to < e2.to))
-      |> List.filterMap (\(e1, e2) -> (intersectEdges e1.label e2.label) |> Maybe.map (\pt -> intersectionToTuple {
-        from1 = e1.from,
-        to1 = e1.to,
-        from2 = e2.from,
-        to2 = e2.to,
-        pt = pt
-        }))
-      |> Set.fromList
   in
-    {
-      mouse = Up,
-      graph = graph2,
-      heldVertexIdx = Nothing,
-      intersections = intersections
-      }
+    Graph.fromNodesAndEdges (Graph.nodes graph) edges2
 
 squareList : List a -> List (a, a)
 squareList xs = xs
