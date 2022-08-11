@@ -8,6 +8,7 @@ import Graph
 import Vec2
 import Engine
 import IntDict
+import Random.List
 
 
 -- TODO: move to engine
@@ -54,7 +55,7 @@ attractionG = 4
 initModel : Model
 initModel =
   let
-    graph = generateGraph (Random.initialSeed 12345) 20
+    graph = generateGraph (Random.initialSeed 12345) 10
     intersections = graph
       |> Graph.edges
       |> squareList
@@ -94,63 +95,62 @@ generateGraph r n =
             |> IntDict.fromList
         in
           (ixys, rt))
-    probGenerator = Random.float 0 1
-    graph = n - 1
+    (vertices2, rrrrrr) = n
       |> List.range 1
-      |> List.foldl (\i (edges, rrrr) ->
+      |> List.foldl (\_ (xs, rrr) ->
         let
-          (newEdges, rr3) = i - 1
-            |> List.range 1
-            |> List.foldl (\j (ys, rrr) ->
-              let
-                (p, rrr1) = Random.step probGenerator rrr
-                dys = if p < 0.10 then [j] else []
-              in
-                (ys ++ dys, rrr1)) ([], rrrr)
-          ss = Set.union edges (newEdges
-            |> List.map (Tuple.pair i)
-            |> Set.fromList
-            )
+          (x, rr1) = (Random.step floatGenerator rrr)
+          (y, rr2) = (Random.step floatGenerator rr1)
         in
-          (ss, rr3))
-        (Set.empty, rrrrr)
-      |> Tuple.first
-      |> (\edges ->
+          ((x, y) :: xs, rr2)) ([], rrrrr)
+      |> (\(xys, rt) ->
         let
-          vs : List (Graph.Node Vertex)
-          vs = vertices |> IntDict.values |> List.indexedMap Graph.Node
-          es : List (Graph.Edge ())
-          es = edges |> Set.toList |> List.map (\(from, to) -> Graph.Edge from to ())
+          ixys = xys
+            |> List.indexedMap Tuple.pair
+            |> IntDict.fromList
         in
-          Graph.fromNodesAndEdges vs es)
-        --positions
-      --   |> List.indexedMap Tuple.pair
-      --   |> List.foldl (\(i, v) g -> g ++ [(v, edges
-      --     |> Set.filter (\(j, k) -> j == i || k == i)
-      --     |> Set.map (\(j, k) -> if j == i then k else j)
-      --     |> Set.toList)]) [])
-      -- |> (\xs ->
-      --   let
-      --     vs = xs
-      --       |> List.map Tuple.first
-      --       |> List.indexedMap Graph.Node
-      --     es = xs
-      --       |> List.indexedMap (\i (_, tos) -> (i, tos))
-      --       |> List.concatMap (\(from, tos) -> tos |> List.map (\to -> Graph.Edge from to ()))
-      --   in
-      --     Graph.fromNodesAndEdges vs es)
-    edges2 = graph
-      |> Graph.edges
-      |> List.filterMap (\{from, to} ->
-        let
-          fromV = vertices |> IntDict.get from |> Maybe.withDefault (0, 0)
-          toV = vertices |> IntDict.get to |> Maybe.withDefault (0, 0)
-        in
-          Just ((from, to), (fromV, toV))
-      )
-      |> List.map (\((from, to), e) -> Graph.Edge from to e)
+          (ixys, rt))
+    -- probGenerator = Random.float 0 1
   in
-    Graph.fromNodesAndEdges (Graph.nodes graph) edges2
+    n - 1
+      |> List.range 0
+      |> squareList
+      |> List.filter (\(i, j) -> i < j)
+      |> (\edges -> (Random.step (Random.List.shuffle edges) rrrrrr))
+      |> Tuple.first
+      |> List.map (\(i, j) ->
+        let
+          -- TODO: no default
+          vi = vertices |> IntDict.get i |> Maybe.withDefault (0, 0)
+          vj = vertices |> IntDict.get j |> Maybe.withDefault (0, 0)
+        in
+          ((i, j), (vi, vj)))
+      |> List.foldl (\((i, j), vij) edges ->
+        if
+          edges
+            |> List.filter (\((k, l), _) -> i /= k && i /= l && j /= k && j /= l)
+            |> List.map Tuple.second
+            |> List.map (intersectEdges vij)
+            |> List.any isJust
+        then
+          edges
+        else
+          ((i, j), vij) :: edges)
+        []
+      |> List.map (\((i, j), _) ->
+        let
+          -- TODO: no default
+          vi = vertices2 |> IntDict.get i |> Maybe.withDefault (0, 0)
+          vj = vertices2 |> IntDict.get j |> Maybe.withDefault (0, 0)
+        in
+          ((i, j), (vi, vj)))
+      |> List.map (\((from, to), vij) -> Graph.Edge from to vij)
+      |> Graph.fromNodesAndEdges (vertices2 |> IntDict.values |> List.indexedMap Graph.Node)
+
+isJust : Maybe a -> Bool
+isJust x = case x of
+  Just _ -> True
+  Nothing -> False
 
 squareList : List a -> List (a, a)
 squareList xs = xs
@@ -316,6 +316,7 @@ intersectEdges (v1, v2) (w1, w2) =
         else
           Just (Vec2.plus v1 (Vec2.multiply ua dv))
 
+-- TODO: fix mouse sticking
 updateMouseState : Engine.Mouse -> MouseState -> MouseState
 updateMouseState mouse model = case (mouse.down, mouse.click) of
   (True, _) -> Down
