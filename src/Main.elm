@@ -55,7 +55,7 @@ attractionG = 4
 initModel : Model
 initModel =
   let
-    graph = generateGraph (Random.initialSeed 12345) 10
+    graph = generateGraph (Random.initialSeed 12345) 20
     intersections = graph
       |> Graph.edges
       |> squareList
