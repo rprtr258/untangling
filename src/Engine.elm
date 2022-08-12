@@ -65,52 +65,22 @@ about your computer:
 So you can use expressions like `computer.mouse.x` and `computer.keyboard.enter`
 in games where you want some mouse or keyboard interaction.
 -}
-type alias Computer =
-  { mouse : Mouse
-  , keyboard : Keyboard
-  , screen : Screen
-  , time : Time
+type alias Computer = {
+  mouse: Mouse,
+  keyboard: Keyboard,
+  screen: Screen,
+  time: Time
   }
-
-
-
--- MOUSE
-
-
-{-| Figure out what is going on with the mouse.
-
-You could draw a circle around the mouse with a program like this:
-
-    import Playground exposing (..)
-
-    main =
-      game view update 0
-
-    view computer memory =
-      [ circle yellow 40
-          |> moveX computer.mouse.x
-          |> moveY computer.mouse.y
-      ]
-
-    update computer memory =
-      memory
-
-You could also use `computer.mouse.down` to change the color of the circle
-while the mouse button is down.
--}
-type alias Mouse =
-  { x : Number
-  , y : Number
-  , down : Bool
-  , click : Bool
-  }
-
 
 {-| A number like `1` or `3.14` or `-120`.
 -}
 type alias Number = Float
 
-
+type alias Mouse = {
+  pos: (Number, Number),
+  down: Bool,
+  click: Bool
+  }
 
 -- KEYBOARD
 
@@ -475,8 +445,7 @@ game viewMemory updateMemory initialMemory =
 initialComputer : Computer
 initialComputer = {
   mouse = {
-    x = 0,
-    y = 0,
+    pos = (0, 0),
     down = False,
     click = False
     },
@@ -538,13 +507,13 @@ gameUpdate updateMemory msg (Game vis memory computer) =
         x = computer.screen.left + pageX
         y = computer.screen.top - pageY
       in
-      Game vis memory { computer | mouse = mouseMove x y computer.mouse }
+      Game vis memory { computer | mouse = mouseMove (x, y) computer.mouse }
     MouseClick -> Game vis memory { computer | mouse = mouseClick True computer.mouse }
     MouseButton isDown -> Game vis memory { computer | mouse = mouseDown isDown computer.mouse }
     VisibilityChanged visibility -> Game visibility memory {
       computer |
       keyboard = emptyKeyboard,
-      mouse = Mouse computer.mouse.x computer.mouse.y False False
+      mouse = Mouse computer.mouse.pos False False
       }
 
 toScreen : Float -> Float -> Screen
@@ -563,8 +532,8 @@ mouseClick bool mouse = {mouse | click = bool}
 mouseDown : Bool -> Mouse -> Mouse
 mouseDown bool mouse = {mouse | down = bool}
 
-mouseMove : Float -> Float -> Mouse -> Mouse
-mouseMove x y mouse = {mouse | x = x, y = y}
+mouseMove : (Float, Float) -> Mouse -> Mouse
+mouseMove pos mouse = {mouse | pos = pos}
 
 emptyKeyboard : Keyboard
 emptyKeyboard = {

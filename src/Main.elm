@@ -77,46 +77,46 @@ initModel =
     }
 
 generateGraph : Random.Seed -> Int -> Graph.Graph Vertex (Vertex, Vertex)
-generateGraph r n =
+generateGraph r0 n =
   let
     floatGenerator = Random.float -400 400
-    (vertices, rrrrr) = n
+    (vertices, r2) = n
+      |> List.range 1
+      |> List.foldl (\_ (xs, r1) ->
+        let
+          (x, r2_1) = (Random.step floatGenerator r1)
+          (y, r2_2) = (Random.step floatGenerator r2_1)
+        in
+          ((x, y) :: xs, r2_2)) ([], r0)
+      |> (\(xys, r3) ->
+        let
+          ixys = xys
+            |> List.indexedMap Tuple.pair
+            |> IntDict.fromList
+        in
+          (ixys, r3))
+    (vertices2, r5) = n
       |> List.range 1
       |> List.foldl (\_ (xs, rrr) ->
         let
           (x, rr1) = (Random.step floatGenerator rrr)
           (y, rr2) = (Random.step floatGenerator rr1)
         in
-          ((x, y) :: xs, rr2)) ([], r)
-      |> (\(xys, rt) ->
+          ((x, y) :: xs, rr2)) ([], r2)
+      |> (\(xys, r4) ->
         let
           ixys = xys
             |> List.indexedMap Tuple.pair
             |> IntDict.fromList
         in
-          (ixys, rt))
-    (vertices2, rrrrrr) = n
-      |> List.range 1
-      |> List.foldl (\_ (xs, rrr) ->
-        let
-          (x, rr1) = (Random.step floatGenerator rrr)
-          (y, rr2) = (Random.step floatGenerator rr1)
-        in
-          ((x, y) :: xs, rr2)) ([], rrrrr)
-      |> (\(xys, rt) ->
-        let
-          ixys = xys
-            |> List.indexedMap Tuple.pair
-            |> IntDict.fromList
-        in
-          (ixys, rt))
+          (ixys, r4))
     -- probGenerator = Random.float 0 1
   in
     n - 1
       |> List.range 0
       |> squareList
       |> List.filter (\(i, j) -> i < j)
-      |> (\edges -> (Random.step (Random.List.shuffle edges) rrrrrr))
+      |> (\edges -> (Random.step (Random.List.shuffle edges) r5))
       |> Tuple.first
       |> List.map (\(i, j) ->
         let
@@ -204,48 +204,17 @@ myUpdate computer model =
     newMouseState = updateMouseState computer.mouse model.mouse
     -- TODO: 2 modes: down=take, up=release or click=take, click again=release
     newIdx = case (model.mouse, newMouseState) of
-      (Up, Down) -> chooseVertex (model.graph |> Graph.nodes |> List.map (\{id, label} -> (id, label))) (computer.mouse.x, computer.mouse.y)
+      (Up, Down) -> chooseVertex
+        (model.graph
+          |> Graph.nodes
+          |> List.map (\{id, label} -> (id, label)))
+        computer.mouse.pos
       (Down, Up) -> Nothing
       _ -> model.heldVertexIdx
-    -- totalVertices = Graph.size model.graph
-    -- forces = if
-    --     computer.keyboard.space || computer.keyboard.enter
-    --   then
-    --     let
-    --       g = if computer.keyboard.space then attractionG else -attractionG
-    --     in
-    --       []
-    --       -- model.graph
-    --       --   |> Graph.edges
-    --       --   |> List.map (\(_, iv, tos) -> tos
-    --       --     |> List.map Tuple.second
-    --       --     |> List.map (\jv ->
-    --       --       let
-    --       --         dv = Vec2.minus jv iv
-    --       --         coeff = g / (Vec2.dist jv iv) / 2.8
-    --       --       in
-    --       --         Vec2.multiply coeff dv))
-    --         -- |> List.map (\(fs, v, tos) -> fs ++ (tos
-    --         --   |> List.filterMap (\j -> Array.get j model.vertices)
-    --         --   |> List.map Tuple.first
-    --         --   |> List.map (\to ->
-    --         --     let
-    --         --       dv = minus to v
-    --         --       coeff = attractionG / (dist to v)
-    --         --     in
-    --         --       multiply coeff dv))
-    --         --   )
-    --         |> List.map (\fs -> List.foldl Vec2.plus (0, 0) fs)
-    --   else
-    --     List.map (\_ -> (0, 0)) (List.range 0 totalVertices)
-    -- movedVertices = model.graph
-      -- |> Graph.mapNodes (\
-      -- |> List.map2 (\f (v, tos) -> (Vec2.plus f v, tos)) forces
-      -- |> Array.fromList
     movedVertices = case newIdx of
       Just i ->
         let
-          newPos = (computer.mouse.x, computer.mouse.y)
+          newPos = computer.mouse.pos
           vs = model.graph
             |> Graph.nodes
             |> List.map (\n -> {n | label = if n.id == i then newPos else n.label})
