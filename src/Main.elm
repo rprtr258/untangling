@@ -48,11 +48,22 @@ type alias Model = {
   }
 
 type alias GraphicsConfig = {
-  vertexRadius: Engine.Number
+  vertexRadius: Engine.Number,
+  vertexColor: Engine.Color,
+  edgeWidth: Engine.Number,
+  intersectionRadius: Engine.Number,
+  intersectionColor: Engine.Color,
+  edgeColor: Engine.Color
   }
 
+initGraphicsConfig : GraphicsConfig
 initGraphicsConfig = {
-  vertexRadius = 10
+  vertexRadius = 10,
+  vertexColor = Engine.palette.darkGrey,
+  edgeWidth = 3,
+  edgeColor = Engine.Hex "#505060",
+  intersectionRadius = 2,
+  intersectionColor = Engine.palette.red
   }
 
 initModel : Model
@@ -184,21 +195,20 @@ myRender screen model =
           Nothing -> ([], Graph.edges model.graph)
         colorEdges c ls = ls
           |> List.map .label
-          |> List.map (\(x, y) -> Engine.path c [x, y])
+          |> List.map (\(x, y) -> Engine.path c model.graphicsConfig.edgeWidth [x, y])
         in
           (colorEdges Engine.palette.black notHeldEdges) ++
-            (colorEdges (Engine.Hex "#505060") heldEdges)
+            (colorEdges model.graphicsConfig.edgeColor heldEdges)
       )
     vertices = model.graph
       |> Graph.nodes
       |> List.map .label
-      |> List.map (\(x, y) -> Engine.circle Engine.palette.darkGrey model.graphicsConfig.vertexRadius |> applyTransforms [Engine.move x y])
-    -- TODO: fix lag on moving
+      |> List.map (\(x, y) -> Engine.circle model.graphicsConfig.vertexColor model.graphicsConfig.vertexRadius |> applyTransforms [Engine.move x y])
     intersections = model.intersections
       |> Set.toList
       |> List.map intersectionFromTuple
       |> List.map .pt
-      |> List.map (\(x, y) -> Engine.circle Engine.palette.red 3 |> applyTransforms [Engine.move x y])
+      |> List.map (\(x, y) -> Engine.circle model.graphicsConfig.intersectionColor model.graphicsConfig.intersectionRadius |> applyTransforms [Engine.move x y])
   in
     background :: edges ++ vertices ++ intersections ++ [intersectionsText]
 

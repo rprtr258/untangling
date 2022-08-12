@@ -584,26 +584,18 @@ type alias Shape = {
   }
 
 
-type Form
-  = Circle Color Number
-  | Oval Color Number Number
-  | Rectangle Color Number Number
-  | Ngon Color Int Number
-  | Polygon Color (List (Number, Number))
-  | Path Color (List (Number, Number))
-  | Image Number Number String
-  | Words Color String
-  | Group (List Shape)
+type Form =
+  Circle Color Number |
+  Oval Color Number Number |
+  Rectangle Color Number Number |
+  Ngon Color Int Number |
+  Polygon Color (List (Number, Number)) |
+  Path Color Number (List (Number, Number)) |
+  Image Number Number String |
+  Words Color String |
+  Group (List Shape)
 
 
-{-| Make circles:
-
-    dot = circle red 10
-    sun = circle yellow 300
-
-You give a color and then the radius. So the higher the number, the larger
-the circle.
--}
 circle : Color -> Number -> Shape
 circle color radius = defaultShape (Circle color radius)
 
@@ -622,83 +614,21 @@ defaultShape form = {
   form = form
   }
 
-{-| Make ovals:
-
-    football = oval brown 200 100
-
-You give the color, and then the width and height. So our `football` example
-is 200 pixels wide and 100 pixels tall.
--}
 oval : Color -> Number -> Number -> Shape
 oval color width height = defaultShape (Oval color width height)
 
-
-{-| Make squares. Here are two squares combined to look like an empty box:
-
-    import Playground exposing (..)
-
-    main =
-      picture
-        [ square purple 80
-        , square white 60
-        ]
-
-The number you give is the dimension of each side. So that purple square would
-be 80 pixels by 80 pixels.
--}
 square : Color -> Number -> Shape
 square color n =
   defaultShape (Rectangle color n n)
 
-
-{-| Make rectangles. This example makes a red cross:
-
-    import Playground exposing (..)
-
-    main =
-      picture
-        [ rectangle red 20 60
-        , rectangle red 60 20
-        ]
-
-You give the color, width, and then height. So the first shape is vertical
-part of the cross, the thinner and taller part.
--}
 rectangle : Color -> Number -> Number -> Shape
 rectangle color width height =
   defaultShape (Rectangle color width height)
 
-
-{-| Make triangles. So if you wanted to draw the Egyptian pyramids, you could
-do a simple version like this:
-
-    import Playground exposing (..)
-
-    main =
-      picture
-        [ triangle darkYellow 200
-        ]
-
-The number is the "radius", so the distance from the center to each point of
-the pyramid is `200`. Pretty big!
--}
 triangle : Color -> Number -> Shape
 triangle color radius =
   defaultShape (Ngon color 3 radius)
 
-
-{-| Make pentagons:
-
-    import Playground exposing (..)
-
-    main =
-      picture
-        [ pentagon darkGrey 100
-        ]
-
-You give the color and then the radius. So the distance from the center to each
-of the five points is 100 pixels.
--}
 pentagon : Color -> Number -> Shape
 pentagon color radius =
   defaultShape (Ngon color 5 radius)
@@ -722,19 +652,6 @@ hexagon : Color -> Number -> Shape
 hexagon color radius =
   defaultShape (Ngon color 6 radius)
 
-
-{-| Make octogons:
-
-    import Playground exposing (..)
-
-    main =
-      picture
-        [ octagon red 100
-        ]
-
-You give the color and radius, so each point of this stop sign is 100 pixels
-from the center.
--}
 octagon : Color -> Number -> Shape
 octagon color radius =
   defaultShape (Ngon color 8 radius)
@@ -757,10 +674,8 @@ polygon : Color -> List (Number, Number) -> Shape
 polygon color points =
   defaultShape (Polygon color points)
 
--- TODO: remove
-path : Color -> List (Number, Number) -> Shape
-path color points =
-  defaultShape (Path color points)
+path : Color -> Number -> List (Number, Number) -> Shape
+path color width points = defaultShape (Path color width points)
 
 
 {-| Add some image from the internet:
@@ -1131,7 +1046,7 @@ renderShape shape =
     Rectangle color width height -> renderRectangle color width height shape.transform
     Ngon color n radius -> renderNgon color n radius shape.transform
     Polygon color points -> renderPolygon color points shape.transform
-    Path color points -> renderPath color points shape.transform
+    Path color width points -> renderPath color width points shape.transform
     Image width height src -> renderImage width height src shape.transform
     Words color string -> renderWords color string shape.transform
     Group shapes ->
@@ -1223,17 +1138,15 @@ renderPolygon color coordinates shape =
     )
     []
 
-renderPath : Color -> List (Number, Number) -> Transform -> Svg.Svg msg
-renderPath color coordinates shape =
-  Svg.polyline (
-    SA.points (List.foldl addPoint "" coordinates) ::
-    SA.fill "none" ::
-    SA.stroke (renderColor color) ::
-    SA.strokeWidth "3" ::
-    SA.transform (renderTransform shape) ::
-    renderAlpha shape.alpha
-    )
-    []
+renderPath : Color -> Number -> List (Number, Number) -> Transform -> Svg.Svg msg
+renderPath color width coordinates shape = Svg.polyline (
+  SA.points (List.foldl addPoint "" coordinates) ::
+  SA.stroke (renderColor color) ::
+  SA.strokeWidth (String.fromFloat width) ::
+  SA.transform (renderTransform shape) ::
+  renderAlpha shape.alpha
+  )
+  []
 
 addPoint : (Float, Float) -> String -> String
 addPoint (x,y) str = str ++ String.fromFloat x ++ "," ++ String.fromFloat -y ++ " "
