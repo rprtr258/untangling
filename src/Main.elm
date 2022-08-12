@@ -205,7 +205,7 @@ myRender screen model =
 myUpdate : Engine.Computer -> Model -> Model
 myUpdate computer model =
   let
-    newMouseState = updateMouseState computer.mouse model.mouse
+    newMouseState = updateMouseState computer.mouse
     -- TODO: 2 modes: down=take, up=release or click=take, click again=release
     newIdx = case (model.mouse, newMouseState) of
       (Up, Down) -> chooseVertex
@@ -290,12 +290,10 @@ intersectEdges (v1, v2) (w1, w2) =
         else
           Just (Vec2.plus v1 (Vec2.multiply ua dv))
 
--- TODO: fix mouse sticking
-updateMouseState : Engine.Mouse -> MouseState -> MouseState
-updateMouseState mouse model = case (mouse.down, mouse.click) of
+updateMouseState : Engine.Mouse -> MouseState
+updateMouseState mouse = case (mouse.down, mouse.click) of
   (True, _) -> Down
-  (_, True) -> Up
-  (_, False) -> model
+  _ -> Up
 
 -- TODO: take closest
 chooseVertex : List (Graph.NodeId, Vertex) -> Engine.Number -> Vec2.Vec2 -> Maybe Graph.NodeId
