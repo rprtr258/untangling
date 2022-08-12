@@ -40,17 +40,20 @@ intersectionToTuple : Intersection -> IntersectionTuple
 intersectionToTuple {from1, to1, from2, to2, pt} = ((from1, to1), (from2, to2), pt)
 
 type alias Model = {
+  graphicsConfig: GraphicsConfig,
   mouse: MouseState,
   heldVertexIdx: Maybe Graph.NodeId,
   graph: Graph.Graph Vertex (Vertex, Vertex),
   intersections: Set.Set IntersectionTuple
   }
 
-vertexRadius : Float
-vertexRadius = 10
+type alias GraphicsConfig = {
+  vertexRadius: Engine.Number
+  }
 
-attractionG : Float
-attractionG = 4
+initGraphicsConfig = {
+  vertexRadius = 10
+  }
 
 initModel : Model
 initModel =
@@ -73,7 +76,8 @@ initModel =
     mouse = Up,
     graph = graph,
     heldVertexIdx = Nothing,
-    intersections = intersections
+    intersections = intersections,
+    graphicsConfig = initGraphicsConfig
     }
 
 generateGraph : Random.Seed -> Int -> Graph.Graph Vertex (Vertex, Vertex)
@@ -188,7 +192,7 @@ myRender screen model =
     vertices = model.graph
       |> Graph.nodes
       |> List.map .label
-      |> List.map (\(x, y) -> Engine.circle Engine.palette.darkGrey vertexRadius |> applyTransforms [Engine.move x y])
+      |> List.map (\(x, y) -> Engine.circle Engine.palette.darkGrey model.graphicsConfig.vertexRadius |> applyTransforms [Engine.move x y])
     -- TODO: fix lag on moving
     intersections = model.intersections
       |> Set.toList
@@ -208,6 +212,7 @@ myUpdate computer model =
         (model.graph
           |> Graph.nodes
           |> List.map (\{id, label} -> (id, label)))
+        model.graphicsConfig.vertexRadius
         computer.mouse.pos
       (Down, Up) -> Nothing
       _ -> model.heldVertexIdx
@@ -258,7 +263,7 @@ myUpdate computer model =
         |> Set.filter (\((a, b), (c, d), _) -> a /= i && b /= i && c /= i && d /= i)
         |> Set.union updatedIntersections
       Nothing -> model.intersections
-  in {
+  in {model |
     mouse = newMouseState,
     graph = movedVertices,
     heldVertexIdx = newIdx,
@@ -293,8 +298,8 @@ updateMouseState mouse model = case (mouse.down, mouse.click) of
   (_, False) -> model
 
 -- TODO: take closest
-chooseVertex : List (Graph.NodeId, Vertex) -> Vec2.Vec2 -> Maybe Graph.NodeId
-chooseVertex vertices pos = vertices
+chooseVertex : List (Graph.NodeId, Vertex) -> Engine.Number -> Vec2.Vec2 -> Maybe Graph.NodeId
+chooseVertex vertices vertexRadius pos = vertices
   |> List.filter (\(_, v) -> ((Vec2.distSquared v pos) < vertexRadius ^ 2))
   |> List.head
   |> Maybe.map Tuple.first
