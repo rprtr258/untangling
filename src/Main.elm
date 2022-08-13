@@ -48,10 +48,10 @@ type alias Model = {
   }
 
 type alias GraphicsConfig = {
-  vertexRadius: Engine.Number,
+  vertexRadius: Float,
   vertexColor: Engine.Color,
-  edgeWidth: Engine.Number,
-  intersectionRadius: Engine.Number,
+  edgeWidth: Float,
+  intersectionRadius: Float,
   intersectionColor: Engine.Color,
   heldEdgeColor: Engine.Color,
   notHeldEdgeColor: Engine.Color,
@@ -313,7 +313,7 @@ updateMouseState mouse = case (mouse.down, mouse.click) of
   _ -> Up
 
 -- TODO: take closest
-chooseVertex : List (Graph.NodeId, Vertex) -> Engine.Number -> Vec2.Vec2 -> Maybe Graph.NodeId
+chooseVertex : List (Graph.NodeId, Vertex) -> Float -> Vec2.Vec2 -> Maybe Graph.NodeId
 chooseVertex vertices vertexRadius pos = vertices
   |> List.filter (\(_, v) -> ((Vec2.distSquared v pos) < vertexRadius ^ 2))
   |> List.head

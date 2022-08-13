@@ -72,12 +72,8 @@ type alias Computer = {
   time: Time
   }
 
-{-| A number like `1` or `3.14` or `-120`.
--}
-type alias Number = Float
-
 type alias Mouse = {
-  pos: (Number, Number),
+  pos: (Float, Float),
   down: Bool,
   click: Bool
   }
@@ -151,7 +147,7 @@ So to make a square move left and right based on the arrow keys, we could say:
       x + toX computer.keyboard
 
 -}
-toX : Keyboard -> Number
+toX : Keyboard -> Float
 toX keyboard =
   (if keyboard.right then 1 else 0) - (if keyboard.left then 1 else 0)
 
@@ -181,7 +177,7 @@ This can be used to move characters around in games just like [`toX`](#toX):
       )
 
 -}
-toY : Keyboard -> Number
+toY : Keyboard -> Float
 toY keyboard =
   (if keyboard.up then 1 else 0) - (if keyboard.down then 1 else 0)
 
@@ -216,7 +212,7 @@ Now when you go up/right, you are still going 1 pixel per update.
       (x + dx, y + dy)
 
 -}
-toXY : Keyboard -> (Number, Number)
+toXY : Keyboard -> (Float, Float)
 toXY keyboard =
   let
     x = toX keyboard
@@ -244,12 +240,12 @@ This can be nice when used with [`moveY`](#moveY) if you want to put something
 on the bottom of the screen, no matter the dimensions.
 -}
 type alias Screen =
-  { width : Number
-  , height : Number
-  , top : Number
-  , left : Number
-  , right : Number
-  , bottom : Number
+  { width : Float
+  , height : Float
+  , top : Float
+  , left : Float
+  , right : Float
+  , bottom : Float
   }
 
 
@@ -282,7 +278,7 @@ Here is an [`animation`](#animation) with a spinning triangle:
 It will do a full rotation once every eight seconds. Try changing the `8` to
 a `2` to make it do a full rotation every two seconds. It moves a lot faster!
 -}
-spin : Number -> Time -> Number
+spin : Float -> Time -> Float
 spin period time = 360 * toFrac period time
 
 
@@ -302,7 +298,7 @@ Here is an [`animation`](#animation) with a circle that resizes:
 The radius of the circle will cycles between 50 and 90 every seven seconds.
 It kind of looks like it is breathing.
 -}
-wave : Number -> Number -> Number -> Time -> Number
+wave : Float -> Float -> Float -> Time -> Float
 wave lo hi period time = lo + (hi - lo) * (1 + cos (turns (toFrac period time))) / 2
 
 
@@ -323,7 +319,7 @@ Here is an [`animation`](#animation) with a rectangle that tips back and forth:
 It gets rotated by an angle. The angle cycles from -20 degrees to 20 degrees
 every four seconds.
 -}
-zigzag : Number -> Number -> Number -> Time -> Number
+zigzag : Float -> Float -> Float -> Time -> Float
 zigzag lo hi period time = lo + (hi - lo) * abs (2 * toFrac period time - 1)
 
 
@@ -571,11 +567,11 @@ updateKeyboard isDown key keyboard =
 
 
 type alias Transform = {
-  x: Number,
-  y: Number,
-  angle: Number,
-  scale: Number,
-  alpha: Number
+  x: Float,
+  y: Float,
+  angle: Float,
+  scale: Float,
+  alpha: Float
   }
 
 type alias Shape = {
@@ -585,18 +581,18 @@ type alias Shape = {
 
 
 type Form =
-  Circle Color Number |
-  Oval Color Number Number |
-  Rectangle Color Number Number |
-  Ngon Color Int Number |
-  Polygon Color (List (Number, Number)) |
-  Path Color Number (List (Number, Number)) |
-  Image Number Number String |
+  Circle Color Float |
+  Oval Color Float Float |
+  Rectangle Color Float Float |
+  Ngon Color Int Float |
+  Polygon Color (List (Float, Float)) |
+  Path Color Float (List (Float, Float)) |
+  Image Float Float String |
   Words Color String |
   Group (List Shape)
 
 
-circle : Color -> Number -> Shape
+circle : Color -> Float -> Shape
 circle color radius = defaultShape (Circle color radius)
 
 defaultTransform : Transform
@@ -614,22 +610,22 @@ defaultShape form = {
   form = form
   }
 
-oval : Color -> Number -> Number -> Shape
+oval : Color -> Float -> Float -> Shape
 oval color width height = defaultShape (Oval color width height)
 
-square : Color -> Number -> Shape
+square : Color -> Float -> Shape
 square color n =
   defaultShape (Rectangle color n n)
 
-rectangle : Color -> Number -> Number -> Shape
+rectangle : Color -> Float -> Float -> Shape
 rectangle color width height =
   defaultShape (Rectangle color width height)
 
-triangle : Color -> Number -> Shape
+triangle : Color -> Float -> Shape
 triangle color radius =
   defaultShape (Ngon color 3 radius)
 
-pentagon : Color -> Number -> Shape
+pentagon : Color -> Float -> Shape
 pentagon color radius =
   defaultShape (Ngon color 5 radius)
 
@@ -648,11 +644,11 @@ The number is the radius, the distance from the center to each point.
 If you made more hexagons, you could [`move`](#move) them around to make a
 honeycomb pattern!
 -}
-hexagon : Color -> Number -> Shape
+hexagon : Color -> Float -> Shape
 hexagon color radius =
   defaultShape (Ngon color 6 radius)
 
-octagon : Color -> Number -> Shape
+octagon : Color -> Float -> Shape
 octagon color radius =
   defaultShape (Ngon color 8 radius)
 
@@ -670,11 +666,11 @@ octagon color radius =
 `(0,0)`. So it is best to build your shapes around that point, and then use
 [`move`](#move) or [`group`](#group) so that rotation makes more sense.
 -}
-polygon : Color -> List (Number, Number) -> Shape
+polygon : Color -> List (Float, Float) -> Shape
 polygon color points =
   defaultShape (Polygon color points)
 
-path : Color -> Number -> List (Number, Number) -> Shape
+path : Color -> Float -> List (Float, Float) -> Shape
 path color width points = defaultShape (Path color width points)
 
 
@@ -689,7 +685,7 @@ path color width points = defaultShape (Path color width points)
 
 You provide the width, height, and then the URL of the image you want to show.
 -}
-image : Number -> Number -> String -> Shape
+image : Float -> Float -> String -> Shape
 image w h src =
   defaultShape (Image w h src)
 
@@ -762,7 +758,7 @@ group shapes = defaultShape (Group shapes)
             |> move -60 -60
         ]
 -}
-move : Number -> Number -> Transform -> Transform
+move : Float -> Float -> Transform -> Transform
 move dx dy transform = {transform | x = (transform.x + dx), y = (transform.y + dy)}
 
 
@@ -778,7 +774,7 @@ you could move the leaves up above the trunk:
             |> moveUp 180
         ]
 -}
-moveUp : Number -> Transform -> Transform
+moveUp : Float -> Transform -> Transform
 moveUp = moveY
 
 
@@ -795,7 +791,7 @@ above the ground, you could move the sky up and the ground down:
             |> moveDown 50
         ]
 -}
-moveDown : Number -> Transform -> Transform
+moveDown : Float -> Transform -> Transform
 moveDown dy transform = {transform | y = (transform.y - dy)}
 
 
@@ -810,7 +806,7 @@ moveDown dy transform = {transform | y = (transform.y - dy)}
             |> moveUp 30
         ]
 -}
-moveLeft : Number -> Transform -> Transform
+moveLeft : Float -> Transform -> Transform
 moveLeft dx = moveX -dx
 
 
@@ -825,7 +821,7 @@ moveLeft dx = moveX -dx
             |> moveDown 100
         ]
 -}
-moveRight : Number -> Transform -> Transform
+moveRight : Float -> Transform -> Transform
 moveRight = moveX
 
 
@@ -844,7 +840,7 @@ moves back and forth:
 
 Using `moveX` feels a bit nicer here because the movement may be positive or negative.
 -}
-moveX : Number -> Transform -> Transform
+moveX : Float -> Transform -> Transform
 moveX dx shape = {shape | x = (shape.x + dx)}
 
 
@@ -867,7 +863,7 @@ grass along the bottom of the screen:
 Using `moveY` feels a bit nicer when setting things relative to the bottom or
 top of the screen, since the values are negative sometimes.
 -}
-moveY : Number -> Transform -> Transform
+moveY : Float -> Transform -> Transform
 moveY dy shape = {shape | y = (shape.y + dy)}
 
 
@@ -882,7 +878,7 @@ be larger, you could say:
             |> scale 3
         ]
 -}
-scale_ : Number -> Transform -> Transform
+scale_ : Float -> Transform -> Transform
 scale_ ns shape = {shape | scale = (shape.scale * ns)}
 
 
@@ -899,7 +895,7 @@ scale_ ns shape = {shape | scale = (shape.scale * ns)}
 The degrees go **counter-clockwise** to match the direction of the
 [unit circle](https://en.wikipedia.org/wiki/Unit_circle).
 -}
-rotate : Number -> Transform -> Transform
+rotate : Float -> Transform -> Transform
 rotate da shape = {shape | angle = (shape.angle + da)}
 
 
@@ -920,7 +916,7 @@ invisible. Here is a shape that fades in and out:
 The number has to be between `0` and `1`, where `0` is totally transparent
 and `1` is completely solid.
 -}
-fade : Number -> Transform -> Transform
+fade : Float -> Transform -> Transform
 fade o shape = {shape | alpha = o}
 
 
@@ -1010,7 +1006,7 @@ colors, click on the color previews to get their RGB values.
 
 [paletton]: http://paletton.com/
 -}
-rgb : Number -> Number -> Number -> Color
+rgb : Float -> Float -> Float -> Color
 rgb r g b =
   let
     colorClamp number = clamp 0 255 (round number)
@@ -1058,7 +1054,7 @@ renderShape shape =
 -- RENDER CIRCLE AND OVAL
 
 
-renderCircle : Color -> Number -> Transform -> Svg.Svg msg
+renderCircle : Color -> Float -> Transform -> Svg.Svg msg
 renderCircle color radius shape =
   Svg.circle
     (  SA.r (String.fromFloat radius)
@@ -1069,7 +1065,7 @@ renderCircle color radius shape =
     []
 
 
-renderOval : Color -> Number -> Number -> Transform -> Svg.Svg msg
+renderOval : Color -> Float -> Float -> Transform -> Svg.Svg msg
 renderOval color width height shape =
   Svg.ellipse (
     SA.rx (String.fromFloat (width  / 2)) ::
@@ -1080,7 +1076,7 @@ renderOval color width height shape =
     )
     []
 
-renderRectangle : Color -> Number -> Number -> Transform -> Svg.Svg msg
+renderRectangle : Color -> Float -> Float -> Transform -> Svg.Svg msg
 renderRectangle color w h shape =
   Svg.rect (
     SA.width (String.fromFloat w) ::
@@ -1091,11 +1087,11 @@ renderRectangle color w h shape =
     )
     []
 
-renderRectTransform : Number -> Number -> Transform -> String
+renderRectTransform : Float -> Float -> Transform -> String
 renderRectTransform width height shape =
   renderTransform shape ++ " translate(" ++ String.fromFloat (-width/2) ++ "," ++ String.fromFloat (-height/2) ++ ")"
 
-renderImage : Number -> Number -> String -> Transform -> Svg.Svg msg
+renderImage : Float -> Float -> String -> Transform -> Svg.Svg msg
 renderImage w h src shape =
   Svg.image (
     SA.xlinkHref src ::
@@ -1106,7 +1102,7 @@ renderImage w h src shape =
     )
     []
 
-renderNgon : Color -> Int -> Number -> Transform -> Svg.Svg msg
+renderNgon : Color -> Int -> Float -> Transform -> Svg.Svg msg
 renderNgon color n radius shape =
   Svg.polygon (
     SA.points (toNgonPoints 0 n radius "") ::
@@ -1128,7 +1124,7 @@ toNgonPoints i n radius string =
     in
       toNgonPoints (i + 1) n radius (string ++ String.fromFloat x ++ "," ++ String.fromFloat y ++ " ")
 
-renderPolygon : Color -> List (Number, Number) -> Transform -> Svg.Svg msg
+renderPolygon : Color -> List (Float, Float) -> Transform -> Svg.Svg msg
 renderPolygon color coordinates shape =
   Svg.polygon (
     SA.points (List.foldl addPoint "" coordinates) ::
@@ -1138,7 +1134,7 @@ renderPolygon color coordinates shape =
     )
     []
 
-renderPath : Color -> Number -> List (Number, Number) -> Transform -> Svg.Svg msg
+renderPath : Color -> Float -> List (Float, Float) -> Transform -> Svg.Svg msg
 renderPath color width coordinates shape = Svg.polyline (
   SA.points (List.foldl addPoint "" coordinates) ::
   SA.stroke (renderColor color) ::
@@ -1171,7 +1167,7 @@ renderColor color = case color of
     String.fromInt b ++
     ")"
 
-renderAlpha : Number -> List (Svg.Attribute msg)
+renderAlpha : Float -> List (Svg.Attribute msg)
 renderAlpha alpha =
   if alpha == 1 then
     []
