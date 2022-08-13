@@ -53,7 +53,10 @@ type alias GraphicsConfig = {
   edgeWidth: Engine.Number,
   intersectionRadius: Engine.Number,
   intersectionColor: Engine.Color,
-  edgeColor: Engine.Color
+  heldEdgeColor: Engine.Color,
+  notHeldEdgeColor: Engine.Color,
+  textColor: Engine.Color,
+  backgroundColor: Engine.Color
   }
 
 initGraphicsConfig : GraphicsConfig
@@ -61,9 +64,12 @@ initGraphicsConfig = {
   vertexRadius = 10,
   vertexColor = Engine.palette.darkGrey,
   edgeWidth = 3,
-  edgeColor = Engine.Hex "#505060",
+  heldEdgeColor = Engine.Hex "#505060",
+  notHeldEdgeColor = Engine.palette.black,
   intersectionRadius = 2,
-  intersectionColor = Engine.palette.red
+  intersectionColor = Engine.palette.red,
+  textColor = Engine.palette.white,
+  backgroundColor = Engine.palette.darkCharcoal
   }
 
 initModel : Model
@@ -180,11 +186,11 @@ applyTransforms fs shape = {shape | transform = (List.foldl (\f g -> \x -> x |> 
 myRender : Engine.Screen -> Model -> List Engine.Shape
 myRender screen model =
   let
-    background = Engine.rectangle Engine.palette.darkCharcoal screen.width screen.height
+    background = Engine.rectangle model.graphicsConfig.backgroundColor screen.width screen.height
     intersectionsText = model.intersections
       |> Set.size
       |> String.fromInt
-      |> Engine.words Engine.palette.white
+      |> Engine.words model.graphicsConfig.textColor
       |> applyTransforms [Engine.move 0 (screen.top - 20)]
     edges = (
       let
@@ -197,18 +203,20 @@ myRender screen model =
           |> List.map .label
           |> List.map (\(x, y) -> Engine.path c model.graphicsConfig.edgeWidth [x, y])
         in
-          (colorEdges Engine.palette.black notHeldEdges) ++
-            (colorEdges model.graphicsConfig.edgeColor heldEdges)
+          (colorEdges model.graphicsConfig.notHeldEdgeColor notHeldEdges) ++
+            (colorEdges model.graphicsConfig.heldEdgeColor heldEdges)
       )
     vertices = model.graph
       |> Graph.nodes
       |> List.map .label
       |> List.map (\(x, y) -> Engine.circle model.graphicsConfig.vertexColor model.graphicsConfig.vertexRadius |> applyTransforms [Engine.move x y])
+
+    intersectionCircle = Engine.circle model.graphicsConfig.intersectionColor model.graphicsConfig.intersectionRadius
     intersections = model.intersections
       |> Set.toList
       |> List.map intersectionFromTuple
       |> List.map .pt
-      |> List.map (\(x, y) -> Engine.circle model.graphicsConfig.intersectionColor model.graphicsConfig.intersectionRadius |> applyTransforms [Engine.move x y])
+      |> List.map (\(x, y) -> intersectionCircle |> applyTransforms [Engine.move x y])
   in
     background :: edges ++ vertices ++ intersections ++ [intersectionsText]
 
