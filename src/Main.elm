@@ -131,7 +131,6 @@ generateGraph r0 n =
             |> IntDict.fromList
         in
           (ixys, r4))
-    -- probGenerator = Random.float 0 1
   in
     n - 1
       |> List.range 0
