@@ -29,6 +29,7 @@ type alias Intersection = {
 type alias Model = {
   graphicsConfig: GraphicsConfig,
   mouseState: MouseState,
+  cameraShift: Vec2.Vec2,
   graph: Graph.Graph Vertex (),
   intersections: List Intersection
   }
@@ -94,7 +95,8 @@ initModel =
     graph = graph,
     mouseState = Up,
     intersections = intersections,
-    graphicsConfig = initGraphicsConfig
+    graphicsConfig = initGraphicsConfig,
+    cameraShift = (0, 0)
     }
 
 generateGraph : Random.Seed -> Int -> Graph.Graph Vertex ()
@@ -208,14 +210,13 @@ render computer model =
       |> Graph.nodes
       |> List.map .label
       |> List.map (\v -> Engine.circle model.graphicsConfig.vertexColor model.graphicsConfig.vertexRadius |> applyTransforms [Engine.move v])
-
     intersectionCircle = Engine.circle model.graphicsConfig.intersectionColor model.graphicsConfig.intersectionRadius
     intersections = model.intersections
       |> List.map .pt
       |> List.map (\v -> intersectionCircle |> applyTransforms [Engine.move v])
-    transforms = case model.mouseState of
+    transforms = (case model.mouseState of
       CameraMove cameraStart -> [Engine.move (Vec2.minus computer.mouse.pos cameraStart)]
-      _ -> []
+      _ -> []) ++ [Engine.move model.cameraShift]
     graphRender = edges ++ vertices ++ intersections
   in
     background :: (graphRender |> List.map (applyTransforms transforms)) ++ [intersectionsText]
@@ -223,25 +224,24 @@ render computer model =
 update : Engine.Computer -> Model -> Model
 update computer model =
   let
+    newCameraShift  = case (model.mouseState, computer.mouse.down) of
+      (CameraMove cameraStart, False) -> Vec2.plus model.cameraShift (Vec2.minus computer.mouse.pos cameraStart)
+      _ -> model.cameraShift
     -- TODO: 2 modes: down=take, up=release or click=take, click again=release
     newMouseState = case (model.mouseState, computer.mouse.down) of
       (Up, True) -> case chooseVertex
         (model.graph
           |> Graph.nodes
-          |> List.map (\{id, label} -> (id, label)))
-        model.graphicsConfig.vertexRadius
-        computer.mouse.pos of
+          |> List.map (\{id, label} -> (id, label))) model.graphicsConfig.vertexRadius (Vec2.minus computer.mouse.pos model.cameraShift) of
         Just idx -> Vertex idx
         Nothing -> CameraMove computer.mouse.pos
       (Vertex idx, True) -> Vertex idx
       (CameraMove cameraStart, True) -> CameraMove cameraStart
-      (Up, False) -> Up
-      (Vertex _, False) -> Up
-      (CameraMove _, False) -> Up -- TODO: save camera disposition
+      (_, False) -> Up
     movedVertices = case newMouseState of
       Vertex i ->
         let
-          newPos = computer.mouse.pos
+          newPos = Vec2.minus computer.mouse.pos model.cameraShift
           vs = model.graph
             |> Graph.nodes
             |> List.map (\n -> {n | label = if n.id == i then newPos else n.label})
@@ -278,7 +278,8 @@ update computer model =
   in {model |
     graph = movedVertices,
     mouseState = newMouseState,
-    intersections = newIntersections
+    intersections = newIntersections,
+    cameraShift = newCameraShift
     }
 
 intersectEdges : (Vertex, Vertex) -> (Vertex, Vertex) -> Maybe Vec2.Vec2
