@@ -207,7 +207,7 @@ animationUpdate msg (Animation v s t as state) = case msg of
     GotViewport {viewport} -> Animation v (toScreen viewport.width viewport.height) t
     Resized w h            -> Animation v (toScreen (toFloat w) (toFloat h)) t
     KeyChanged _ _         -> state
-    MouseMove _ _          -> state
+    MouseMove _            -> state
     MouseClick             -> state
     MouseButton _          -> state
 
@@ -256,13 +256,8 @@ gameSubscriptions = Sub.batch [
   Events.onClick (Decode.succeed MouseClick),
   Events.onMouseDown (Decode.succeed (MouseButton True)),
   Events.onMouseUp (Decode.succeed (MouseButton False)),
-  Events.onMouseMove (Decode.map2 MouseMove (Decode.field "pageX" Decode.float) (Decode.field "pageY" Decode.float))
+  Events.onMouseMove (Decode.map2 (\x -> \y -> MouseMove (x, y)) (Decode.field "pageX" Decode.float) (Decode.field "pageY" Decode.float))
   ]
-
-
-
--- GAME HELPERS
-
 
 type Game memory = Game Events.Visibility memory Computer
 
@@ -273,7 +268,7 @@ type Msg =
   GotViewport Dom.Viewport |
   Resized Int Int |
   VisibilityChanged Events.Visibility |
-  MouseMove Float Float |
+  MouseMove Vec2.Vec2 |
   MouseClick |
   MouseButton Bool
 
@@ -294,7 +289,7 @@ gameUpdate updateMemory msg (Game vis memory computer) =
     GotViewport {viewport} -> Game vis memory {computer | screen = toScreen viewport.width viewport.height}
     Resized w h -> Game vis memory {computer | screen = toScreen (toFloat w) (toFloat h)}
     KeyChanged isDown key -> Game vis memory {computer | keyboard = updateKeyboard isDown key computer.keyboard}
-    MouseMove pageX pageY ->
+    MouseMove (pageX, pageY) ->
       let
         x = computer.screen.left + pageX
         y = computer.screen.top - pageY

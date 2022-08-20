@@ -1,7 +1,5 @@
 module Main exposing (main)
 
-import Set
-
 import Random
 import Graph
 
