@@ -176,15 +176,16 @@ main = Engine.game render update initModel
 applyTransforms : List (Engine.Transform -> Engine.Transform) -> Engine.Shape -> Engine.Shape
 applyTransforms fs shape = {shape | transform = (List.foldl (\f g -> \x -> x |> g |> f) identity fs) shape.transform}
 
-render : Engine.Screen -> Model -> List Engine.Shape
-render screen model =
+render : Engine.Computer -> Model -> List Engine.Shape
+render computer model =
   let
+    screen = computer.screen
     background = Engine.rectangle model.graphicsConfig.backgroundColor screen.width screen.height
     intersectionsText = model.intersections
       |> List.length
       |> String.fromInt
       |> Engine.words model.graphicsConfig.textColor
-      |> applyTransforms [Engine.move 0 (screen.top - 20)]
+      |> applyTransforms [Engine.move (0, (screen.top - 20))]
     edges =
       let
         (heldEdges, notHeldEdges) = case model.mouseState of
@@ -206,14 +207,17 @@ render screen model =
     vertices = model.graph
       |> Graph.nodes
       |> List.map .label
-      |> List.map (\(x, y) -> Engine.circle model.graphicsConfig.vertexColor model.graphicsConfig.vertexRadius |> applyTransforms [Engine.move x y])
+      |> List.map (\v -> Engine.circle model.graphicsConfig.vertexColor model.graphicsConfig.vertexRadius |> applyTransforms [Engine.move v])
 
     intersectionCircle = Engine.circle model.graphicsConfig.intersectionColor model.graphicsConfig.intersectionRadius
     intersections = model.intersections
       |> List.map .pt
-      |> List.map (\(x, y) -> intersectionCircle |> applyTransforms [Engine.move x y])
+      |> List.map (\v -> intersectionCircle |> applyTransforms [Engine.move v])
+    transforms = case model.mouseState of
+      CameraMove cameraStart -> [Engine.move (Vec2.minus computer.mouse.pos cameraStart)]
+      _ -> []
   in
-    background :: edges ++ vertices ++ intersections ++ [intersectionsText]
+    background :: ((edges ++ vertices ++ intersections) |> List.map (applyTransforms transforms)) ++ [intersectionsText]
 
 update : Engine.Computer -> Model -> Model
 update computer model =

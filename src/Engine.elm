@@ -213,7 +213,7 @@ animationUpdate msg (Animation v s t as state) = case msg of
 
 
 
-game : (Screen -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
+game : (Computer -> memory -> List Shape) -> (Computer -> memory -> memory) -> memory -> Program () (Game memory) Msg
 game viewMemory updateMemory initialMemory =
   let
     init () = (
@@ -222,7 +222,7 @@ game viewMemory updateMemory initialMemory =
       )
     view (Game _ memory computer) = {
       title = "Playground",
-      body = [render computer.screen (viewMemory computer.screen memory)]
+      body = [render computer.screen (viewMemory computer memory)]
       }
     update msg model = (
       gameUpdate updateMemory msg model,
@@ -547,8 +547,8 @@ group shapes = defaultShape (Group shapes)
             |> move -60 -60
         ]
 -}
-move : Float -> Float -> Transform -> Transform
-move dx dy transform = {transform | x = (transform.x + dx), y = (transform.y + dy)}
+move : Vec2.Vec2 -> Transform -> Transform
+move (dx, dy) transform = {transform | x = (transform.x + dx), y = (transform.y + dy)}
 
 
 {-| Move a shape up by some number of pixels. So if you wanted to make a tree
