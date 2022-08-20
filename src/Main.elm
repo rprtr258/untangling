@@ -15,11 +15,14 @@ import Random.List
 type MouseState = Up | Down
 type alias Vertex = Vec2.Vec2 -- TODO: coords in [-1, -1] x [1, 1]
 
+type alias Edge = (Graph.NodeId, Graph.NodeId)
+
+toEdge : Graph.Edge a -> Edge
+toEdge {from, to} = (from, to)
+
 type alias Intersection = {
-  from1: Graph.NodeId,
-  to1: Graph.NodeId,
-  from2: Graph.NodeId,
-  to2: Graph.NodeId,
+  first: Edge,
+  second: Edge,
   pt: Vec2.Vec2
   }
 
@@ -84,10 +87,8 @@ initModel =
           pt = intersectEdges (from1v, to1v) (from2v, to2v)
         in
           Maybe.map (\p -> {
-            from1 = e1.from,
-            to1 = e1.to,
-            from2 = e2.from,
-            to2 = e2.to,
+            first = (e1.from, e1.to),
+            second = (e2.from, e2.to),
             pt = p
             }) pt)
   in {
@@ -259,15 +260,13 @@ update computer model =
       |> List.concatMap (\e -> List.map (Tuple.pair e) edges2)
       |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
       |> List.filterMap (\(e1, e2) -> Maybe.map (\i -> {
-        from1 = e1.from,
-        to1 = e1.to,
-        from2 = e2.from,
-        to2 = e2.to,
+        first = (e1.from, e1.to),
+        second = (e2.from, e2.to),
         pt = i
         }) (intersectEdges e1.label e2.label))
     newIntersections = case newIdx of
       Just i -> model.intersections
-        |> List.filter (\{from1, to1, from2, to2} -> from1 /= i && to1 /= i && from2 /= i && to2 /= i)
+        |> List.filter (\{first, second} -> (Tuple.first first) /= i && (Tuple.second first) /= i && (Tuple.first second) /= i && (Tuple.second second) /= i)
         |> (++) updatedIntersections
       Nothing -> model.intersections
   in {model |
@@ -297,6 +296,7 @@ intersectEdges (v1, v2) (w1, w2) =
         else
           Just (Vec2.plus v1 (Vec2.multiply ua dv))
 
+-- TODO: move to engine
 updateMouseState : Engine.Mouse -> MouseState
 updateMouseState mouse = case (mouse.down, mouse.click) of
   (True, _) -> Down
