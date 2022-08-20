@@ -14,11 +14,7 @@ import Random.List
 -- TODO: move to engine
 type MouseState = Up | Down
 type alias Vertex = Vec2.Vec2 -- TODO: coords in [-1, -1] x [1, 1]
-type alias IntersectionTuple = (
-  (Graph.NodeId, Graph.NodeId),
-  (Graph.NodeId, Graph.NodeId),
-  Vec2.Vec2
-  )
+
 type alias Intersection = {
   from1: Graph.NodeId,
   to1: Graph.NodeId,
@@ -27,24 +23,12 @@ type alias Intersection = {
   pt: Vec2.Vec2
   }
 
-intersectionFromTuple : IntersectionTuple -> Intersection
-intersectionFromTuple ((from1, to1), (from2, to2), pt) = {
-  from1 = from1,
-  to1 = to1,
-  from2 = from2,
-  to2 = to2,
-  pt = pt
-  }
-
-intersectionToTuple : Intersection -> IntersectionTuple
-intersectionToTuple {from1, to1, from2, to2, pt} = ((from1, to1), (from2, to2), pt)
-
 type alias Model = {
   graphicsConfig: GraphicsConfig,
   mouse: MouseState,
   heldVertexIdx: Maybe Graph.NodeId,
-  graph: Graph.Graph Vertex (Vertex, Vertex),
-  intersections: Set.Set IntersectionTuple
+  graph: Graph.Graph Vertex (),
+  intersections: List Intersection
   }
 
 type alias GraphicsConfig = {
@@ -72,23 +56,40 @@ initGraphicsConfig = {
   backgroundColor = Engine.palette.darkCharcoal
   }
 
+augmentEdgesWithEndsPositions : Graph.Graph Vertex () -> List (Graph.Edge ()) -> List (Graph.Edge (Vertex, Vertex))
+augmentEdgesWithEndsPositions graph = List.map (\{from, to} ->
+  let
+    fromv = graph |> Graph.get from |> Maybe.map (\x -> x.node.label) |> Maybe.withDefault (0, 0) -- TODO: remove defaults
+    tov = graph |> Graph.get to |> Maybe.map (\x -> x.node.label) |> Maybe.withDefault (0, 0) -- TODO: remove defaults
+  in {
+    from = from,
+    to = to,
+    label = (fromv, tov)
+    })
+
 initModel : Model
 initModel =
   let
     graph = generateGraph (Random.initialSeed 12345) 20
     intersections = graph
       |> Graph.edges
+      |> augmentEdgesWithEndsPositions graph
       |> squareList
       |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
-      |> List.filter (\(e1, e2) -> (e1.from < e2.from || e1.from == e2.from && e1.to < e2.to))
-      |> List.filterMap (\(e1, e2) -> (intersectEdges e1.label e2.label) |> Maybe.map (\pt -> intersectionToTuple {
-        from1 = e1.from,
-        to1 = e1.to,
-        from2 = e2.from,
-        to2 = e2.to,
-        pt = pt
-        }))
-      |> Set.fromList
+      |> List.filter (\(e1, e2) -> ((e1.from, e1.to) < (e2.from, e2.to)))
+      |> List.filterMap (\(e1, e2) ->
+        let
+          (from1v, to1v) = e1.label
+          (from2v, to2v) = e2.label
+          pt = intersectEdges (from1v, to1v) (from2v, to2v)
+        in
+          Maybe.map (\p -> {
+            from1 = e1.from,
+            to1 = e1.to,
+            from2 = e2.from,
+            to2 = e2.to,
+            pt = p
+            }) pt)
   in {
     mouse = Up,
     graph = graph,
@@ -97,7 +98,7 @@ initModel =
     graphicsConfig = initGraphicsConfig
     }
 
-generateGraph : Random.Seed -> Int -> Graph.Graph Vertex (Vertex, Vertex)
+generateGraph : Random.Seed -> Int -> Graph.Graph Vertex ()
 generateGraph r0 n =
   let
     floatGenerator = Random.float -400 400
@@ -157,14 +158,8 @@ generateGraph r0 n =
         else
           ((i, j), vij) :: edges)
         []
-      |> List.map (\((i, j), _) ->
-        let
-          -- TODO: no default
-          vi = vertices2 |> IntDict.get i |> Maybe.withDefault (0, 0)
-          vj = vertices2 |> IntDict.get j |> Maybe.withDefault (0, 0)
-        in
-          ((i, j), (vi, vj)))
-      |> List.map (\((from, to), vij) -> Graph.Edge from to vij)
+      |> List.map Tuple.first
+      |> List.map (\(from, to) -> Graph.Edge from to ())
       |> Graph.fromNodesAndEdges (vertices2 |> IntDict.values |> List.indexedMap Graph.Node)
 
 isJust : Maybe a -> Bool
@@ -177,17 +172,17 @@ squareList xs = xs
   |> List.concatMap (\x -> xs |> List.map (Tuple.pair x))
 
 main : Program () (Engine.Game Model) Engine.Msg
-main = Engine.game myRender myUpdate initModel
+main = Engine.game render update initModel
 
 applyTransforms : List (Engine.Transform -> Engine.Transform) -> Engine.Shape -> Engine.Shape
 applyTransforms fs shape = {shape | transform = (List.foldl (\f g -> \x -> x |> g |> f) identity fs) shape.transform}
 
-myRender : Engine.Screen -> Model -> List Engine.Shape
-myRender screen model =
+render : Engine.Screen -> Model -> List Engine.Shape
+render screen model =
   let
     background = Engine.rectangle model.graphicsConfig.backgroundColor screen.width screen.height
     intersectionsText = model.intersections
-      |> Set.size
+      |> List.length
       |> String.fromInt
       |> Engine.words model.graphicsConfig.textColor
       |> applyTransforms [Engine.move 0 (screen.top - 20)]
@@ -199,7 +194,12 @@ myRender screen model =
             |> List.partition (\{from, to} -> from == idx || to == idx)
           Nothing -> ([], Graph.edges model.graph)
         colorEdges c ls = ls
-          |> List.map .label
+          |> List.map (\{from, to} ->
+            let
+              fromv = model.graph |> Graph.get from |> Maybe.map (\x -> x.node.label) |> Maybe.withDefault (0, 0) -- TODO: remove defaults
+              tov = model.graph |> Graph.get to |> Maybe.map (\x -> x.node.label) |> Maybe.withDefault (0, 0) -- TODO: remove defaults
+            in
+              (fromv, tov))
           |> List.map (\(x, y) -> Engine.path c model.graphicsConfig.edgeWidth [x, y])
         in
           (colorEdges model.graphicsConfig.notHeldEdgeColor notHeldEdges) ++
@@ -212,15 +212,13 @@ myRender screen model =
 
     intersectionCircle = Engine.circle model.graphicsConfig.intersectionColor model.graphicsConfig.intersectionRadius
     intersections = model.intersections
-      |> Set.toList
-      |> List.map intersectionFromTuple
       |> List.map .pt
       |> List.map (\(x, y) -> intersectionCircle |> applyTransforms [Engine.move x y])
   in
     background :: edges ++ vertices ++ intersections ++ [intersectionsText]
 
-myUpdate : Engine.Computer -> Model -> Model
-myUpdate computer model =
+update : Engine.Computer -> Model -> Model
+update computer model =
   let
     newMouseState = updateMouseState computer.mouse
     -- TODO: 2 modes: down=take, up=release or click=take, click again=release
@@ -240,20 +238,13 @@ myUpdate computer model =
           vs = model.graph
             |> Graph.nodes
             |> List.map (\n -> {n | label = if n.id == i then newPos else n.label})
-          es = model.graph
-            |> Graph.edges
-            |> List.map (\e -> {e | label =
-              if e.from == i
-                then (newPos, Tuple.second e.label)
-              else if e.to == i
-                then (Tuple.first e.label, newPos)
-              else e.label})
+          es = model.graph |> Graph.edges
         in
           Graph.fromNodesAndEdges vs es
       Nothing -> model.graph
     edges2 = movedVertices
       |> Graph.edges
-      |> List.map (\{from, to, label} -> ((from, to), label))
+      |> augmentEdgesWithEndsPositions movedVertices
     updatedIntersections = newIdx
       |> Maybe.andThen (\idx -> Graph.get idx movedVertices)
       |> Maybe.map (\ctx ->
@@ -261,24 +252,23 @@ myUpdate computer model =
           tos = (Graph.alongOutgoingEdges ctx) ++ (Graph.alongIncomingEdges ctx)
           idx = ctx.node.id
         in
-          tos |> List.map (Tuple.pair idx)
+          tos |> List.map (\to -> Graph.Edge idx to ())
       )
       |> Maybe.withDefault []
-      |> List.filterMap (\(from, to) ->
-        let
-          fromV = movedVertices |> Graph.get from |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
-          toV = movedVertices |> Graph.get to |> Maybe.map (\{node} -> node.label) |> Maybe.withDefault (0, 0)
-        in
-          Just ((from, to), (fromV, toV))
-      )
+      |> augmentEdgesWithEndsPositions movedVertices
       |> List.concatMap (\e -> List.map (Tuple.pair e) edges2)
-      |> List.filter (\(((from1, to1), _), ((from2, to2), _)) -> (from1 /= from2 && from1 /= to2 && to1 /= from2 && to1 /= to2))
-      |> List.filterMap (\(((from1, to1), e1), ((from2, to2), e2)) -> Maybe.map (\i -> ((from1, to1), (from2, to2), i)) (intersectEdges e1 e2))
-      |> Set.fromList
+      |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
+      |> List.filterMap (\(e1, e2) -> Maybe.map (\i -> {
+        from1 = e1.from,
+        to1 = e1.to,
+        from2 = e2.from,
+        to2 = e2.to,
+        pt = i
+        }) (intersectEdges e1.label e2.label))
     newIntersections = case newIdx of
       Just i -> model.intersections
-        |> Set.filter (\((a, b), (c, d), _) -> a /= i && b /= i && c /= i && d /= i)
-        |> Set.union updatedIntersections
+        |> List.filter (\{from1, to1, from2, to2} -> from1 /= i && to1 /= i && from2 /= i && to2 /= i)
+        |> (++) updatedIntersections
       Nothing -> model.intersections
   in {model |
     mouse = newMouseState,
