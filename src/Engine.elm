@@ -11,6 +11,8 @@ import Task
 import Time
 import Set
 
+import Vec2
+
 picture : List Shape -> Program () Screen (Int, Int)
 picture shapes =
   let
@@ -52,7 +54,7 @@ initialComputer = {
   }
 
 type alias Mouse = {
-  pos: (Float, Float),
+  pos: Vec2.Vec2,
   down: Bool,
   click: Bool
   }
@@ -296,7 +298,7 @@ gameUpdate updateMemory msg (Game vis memory computer) =
       let
         x = computer.screen.left + pageX
         y = computer.screen.top - pageY
-        mouseMove : (Float, Float) -> Mouse -> Mouse
+        mouseMove : Vec2.Vec2 -> Mouse -> Mouse
         mouseMove pos mouse = {mouse | pos = pos}
         newMouse = mouseMove (x, y) computer.mouse
       in
@@ -342,8 +344,7 @@ updateKeyboard : Bool -> String -> Keyboard -> Keyboard
 updateKeyboard isDown key keyboard =
   let
     keys = (if isDown then Set.insert else Set.remove) key keyboard.keys
-  in
-  case key of
+  in case key of
     " "          -> {keyboard | keys = keys, space = isDown}
     "Enter"      -> {keyboard | keys = keys, enter = isDown}
     "Shift"      -> {keyboard | keys = keys, shift = isDown}
@@ -353,11 +354,6 @@ updateKeyboard isDown key keyboard =
     "ArrowLeft"  -> {keyboard | keys = keys, left = isDown}
     "ArrowRight" -> {keyboard | keys = keys, right = isDown}
     _            -> {keyboard | keys = keys}
-
-
-
--- SHAPES
-
 
 type alias Transform = {
   x: Float,
@@ -378,8 +374,8 @@ type Form =
   Oval Color Float Float |
   Rectangle Color Float Float |
   Ngon Color Int Float |
-  Polygon Color (List (Float, Float)) |
-  Path Color Float (List (Float, Float)) |
+  Polygon Color (List Vec2.Vec2) |
+  Path Color Float (List Vec2.Vec2) |
   Image Float Float String |
   Words Color String |
   Group (List Shape)
@@ -459,11 +455,11 @@ octagon color radius =
 `(0,0)`. So it is best to build your shapes around that point, and then use
 [`move`](#move) or [`group`](#group) so that rotation makes more sense.
 -}
-polygon : Color -> List (Float, Float) -> Shape
+polygon : Color -> List Vec2.Vec2 -> Shape
 polygon color points =
   defaultShape (Polygon color points)
 
-path : Color -> Float -> List (Float, Float) -> Shape
+path : Color -> Float -> List Vec2.Vec2 -> Shape
 path color width points = defaultShape (Path color width points)
 
 
@@ -917,7 +913,7 @@ toNgonPoints i n radius string =
     in
       toNgonPoints (i + 1) n radius (string ++ String.fromFloat x ++ "," ++ String.fromFloat y ++ " ")
 
-renderPolygon : Color -> List (Float, Float) -> Transform -> Svg.Svg msg
+renderPolygon : Color -> List Vec2.Vec2 -> Transform -> Svg.Svg msg
 renderPolygon color coordinates shape =
   Svg.polygon (
     SA.points (List.foldl addPoint "" coordinates) ::
@@ -927,7 +923,7 @@ renderPolygon color coordinates shape =
     )
     []
 
-renderPath : Color -> Float -> List (Float, Float) -> Transform -> Svg.Svg msg
+renderPath : Color -> Float -> List Vec2.Vec2 -> Transform -> Svg.Svg msg
 renderPath color width coordinates shape = Svg.polyline (
   SA.points (List.foldl addPoint "" coordinates) ::
   SA.stroke (renderColor color) ::
@@ -937,8 +933,8 @@ renderPath color width coordinates shape = Svg.polyline (
   )
   []
 
-addPoint : (Float, Float) -> String -> String
-addPoint (x,y) str = str ++ String.fromFloat x ++ "," ++ String.fromFloat -y ++ " "
+addPoint : Vec2.Vec2 -> String -> String
+addPoint (x, y) str = str ++ String.fromFloat x ++ "," ++ String.fromFloat -y ++ " "
 
 renderWords : Color -> String -> Transform -> Svg.Svg msg
 renderWords color string shape =
