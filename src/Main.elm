@@ -86,8 +86,8 @@ initModel =
           pt = intersectEdges (from1v, to1v) (from2v, to2v)
         in
           Maybe.map (\p -> {
-            first = (e1.from, e1.to),
-            second = (e2.from, e2.to),
+            first = toEdge e1,
+            second = toEdge e2,
             pt = p
             }) pt)
   in {
@@ -265,8 +265,8 @@ update computer model =
         |> List.concatMap (\e -> List.map (Tuple.pair e) edges2)
         |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
         |> List.filterMap (\(e1, e2) -> Maybe.map (\i -> {
-          first = (e1.from, e1.to),
-          second = (e2.from, e2.to),
+          first = toEdge e1,
+          second = toEdge e2,
           pt = i
           }) (intersectEdges e1.label e2.label))
       _ -> []
