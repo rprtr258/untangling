@@ -12,7 +12,7 @@ import Random.List
 
 
 -- TODO: move to engine
-type MouseState = Up | Down
+type MouseState = Up | Vertex Graph.NodeId | CameraMove Vec2.Vec2
 type alias Vertex = Vec2.Vec2 -- TODO: coords in [-1, -1] x [1, 1]
 
 type alias Edge = (Graph.NodeId, Graph.NodeId)
@@ -28,8 +28,7 @@ type alias Intersection = {
 
 type alias Model = {
   graphicsConfig: GraphicsConfig,
-  mouse: MouseState,
-  heldVertexIdx: Maybe Graph.NodeId,
+  mouseState: MouseState,
   graph: Graph.Graph Vertex (),
   intersections: List Intersection
   }
@@ -92,9 +91,8 @@ initModel =
             pt = p
             }) pt)
   in {
-    mouse = Up,
     graph = graph,
-    heldVertexIdx = Nothing,
+    mouseState = Up,
     intersections = intersections,
     graphicsConfig = initGraphicsConfig
     }
@@ -187,13 +185,13 @@ render screen model =
       |> String.fromInt
       |> Engine.words model.graphicsConfig.textColor
       |> applyTransforms [Engine.move 0 (screen.top - 20)]
-    edges = (
+    edges =
       let
-        (heldEdges, notHeldEdges) = case model.heldVertexIdx of
-          Maybe.Just idx -> model.graph
+        (heldEdges, notHeldEdges) = case model.mouseState of
+          Vertex idx -> model.graph
             |> Graph.edges
             |> List.partition (\{from, to} -> from == idx || to == idx)
-          Nothing -> ([], Graph.edges model.graph)
+          _ -> ([], Graph.edges model.graph)
         colorEdges c ls = ls
           |> List.map (\{from, to} ->
             let
@@ -205,7 +203,6 @@ render screen model =
         in
           (colorEdges model.graphicsConfig.notHeldEdgeColor notHeldEdges) ++
             (colorEdges model.graphicsConfig.heldEdgeColor heldEdges)
-      )
     vertices = model.graph
       |> Graph.nodes
       |> List.map .label
@@ -221,19 +218,23 @@ render screen model =
 update : Engine.Computer -> Model -> Model
 update computer model =
   let
-    newMouseState = updateMouseState computer.mouse
     -- TODO: 2 modes: down=take, up=release or click=take, click again=release
-    newIdx = case (model.mouse, newMouseState) of
-      (Up, Down) -> chooseVertex
+    newMouseState = case (model.mouseState, computer.mouse.down) of
+      (Up, True) -> case chooseVertex
         (model.graph
           |> Graph.nodes
           |> List.map (\{id, label} -> (id, label)))
         model.graphicsConfig.vertexRadius
-        computer.mouse.pos
-      (Down, Up) -> Nothing
-      _ -> model.heldVertexIdx
-    movedVertices = case newIdx of
-      Just i ->
+        computer.mouse.pos of
+        Just idx -> Vertex idx
+        Nothing -> CameraMove computer.mouse.pos
+      (Vertex idx, True) -> Vertex idx
+      (CameraMove cameraStart, True) -> CameraMove cameraStart
+      (Up, False) -> Up
+      (Vertex _, False) -> Up
+      (CameraMove _, False) -> Up -- TODO: save camera disposition
+    movedVertices = case newMouseState of
+      Vertex i ->
         let
           newPos = computer.mouse.pos
           vs = model.graph
@@ -242,37 +243,36 @@ update computer model =
           es = model.graph |> Graph.edges
         in
           Graph.fromNodesAndEdges vs es
-      Nothing -> model.graph
+      _ -> model.graph
     edges2 = movedVertices
       |> Graph.edges
       |> augmentEdgesWithEndsPositions movedVertices
-    updatedIntersections = newIdx
-      |> Maybe.andThen (\idx -> Graph.get idx movedVertices)
-      |> Maybe.map (\ctx ->
-        let
-          tos = (Graph.alongOutgoingEdges ctx) ++ (Graph.alongIncomingEdges ctx)
-          idx = ctx.node.id
-        in
-          tos |> List.map (\to -> Graph.Edge idx to ())
-      )
-      |> Maybe.withDefault []
-      |> augmentEdgesWithEndsPositions movedVertices
-      |> List.concatMap (\e -> List.map (Tuple.pair e) edges2)
-      |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
-      |> List.filterMap (\(e1, e2) -> Maybe.map (\i -> {
-        first = (e1.from, e1.to),
-        second = (e2.from, e2.to),
-        pt = i
-        }) (intersectEdges e1.label e2.label))
-    newIntersections = case newIdx of
-      Just i -> model.intersections
+    updatedIntersections = case newMouseState of
+      Vertex idx -> Graph.get idx movedVertices
+        |> Maybe.map (\ctx ->
+          let
+            tos = (Graph.alongOutgoingEdges ctx) ++ (Graph.alongIncomingEdges ctx)
+          in
+            tos |> List.map (\to -> Graph.Edge ctx.node.id to ())
+        )
+        |> Maybe.withDefault []
+        |> augmentEdgesWithEndsPositions movedVertices
+        |> List.concatMap (\e -> List.map (Tuple.pair e) edges2)
+        |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
+        |> List.filterMap (\(e1, e2) -> Maybe.map (\i -> {
+          first = (e1.from, e1.to),
+          second = (e2.from, e2.to),
+          pt = i
+          }) (intersectEdges e1.label e2.label))
+      _ -> []
+    newIntersections = case newMouseState of
+      Vertex i -> model.intersections
         |> List.filter (\{first, second} -> (Tuple.first first) /= i && (Tuple.second first) /= i && (Tuple.first second) /= i && (Tuple.second second) /= i)
         |> (++) updatedIntersections
-      Nothing -> model.intersections
+      _ -> model.intersections
   in {model |
-    mouse = newMouseState,
     graph = movedVertices,
-    heldVertexIdx = newIdx,
+    mouseState = newMouseState,
     intersections = newIntersections
     }
 
@@ -295,12 +295,6 @@ intersectEdges (v1, v2) (w1, w2) =
           Nothing
         else
           Just (Vec2.plus v1 (Vec2.multiply ua dv))
-
--- TODO: move to engine
-updateMouseState : Engine.Mouse -> MouseState
-updateMouseState mouse = case (mouse.down, mouse.click) of
-  (True, _) -> Down
-  _ -> Up
 
 -- TODO: take closest
 chooseVertex : List (Graph.NodeId, Vertex) -> Float -> Vec2.Vec2 -> Maybe Graph.NodeId
