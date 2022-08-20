@@ -11,23 +11,6 @@ import Task
 import Time
 import Set
 
-
-
--- PICTURE
-
-
-{-| Make a picture! Here is a picture of a triangle with an eyeball:
-
-    import Playground exposing (..)
-
-    main =
-      picture
-        [ triangle green 150
-        , circle white 40
-        , circle black 10
-        ]
-
--}
 picture : List Shape -> Program () Screen (Int, Int)
 picture shapes =
   let
@@ -49,27 +32,23 @@ picture shapes =
       subscriptions = subscriptions
       }
 
-
-
--- COMPUTER
-
-
-{-| When writing a [`game`](#game), you can look up all sorts of information
-about your computer:
-
-  - [`Mouse`](#Mouse) - Where is the mouse right now?
-  - [`Keyboard`](#Keyboard) - Are the arrow keys down?
-  - [`Screen`](#Screen) - How wide is the screen?
-  - [`Time`](#Time) - What time is it right now?
-
-So you can use expressions like `computer.mouse.x` and `computer.keyboard.enter`
-in games where you want some mouse or keyboard interaction.
--}
 type alias Computer = {
   mouse: Mouse,
   keyboard: Keyboard,
   screen: Screen,
-  time: Time
+  time: Time.Posix
+  }
+
+initialComputer : Computer
+initialComputer = {
+  mouse = {
+    pos = (0, 0),
+    down = False,
+    click = False
+    },
+  keyboard = emptyKeyboard,
+  screen = toScreen 600 600,
+  time = Time.millisToPosix 0
   }
 
 type alias Mouse = {
@@ -77,9 +56,6 @@ type alias Mouse = {
   down: Bool,
   click: Bool
   }
-
--- KEYBOARD
-
 
 {-| Figure out what is going on with the keyboard.
 
@@ -89,17 +65,6 @@ If someone is pressing the UP and RIGHT arrows, you will see a value like this:
     , space = False, enter = False, shift = False, backspace = False
     , keys = Set.fromList ["ArrowUp","ArrowRight"]
     }
-
-So if you want to move a character based on arrows, you could write an update
-like this:
-
-    update computer y =
-      if computer.keyboard.up then
-        y + 1
-      else
-        y
-
-Check out [`toX`](#toX) and [`toY`](#toY) which make this even easier!
 
 **Note:** The `keys` set will be filled with the name of all keys which are
 down right now. So you will see things like `"a"`, `"b"`, `"c"`, `"1"`, `"2"`,
@@ -111,154 +76,37 @@ names used for all the different special keys! From there, you can use
 [list]: https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
 [member]: /packages/elm/core/latest/Set#member
 -}
-type alias Keyboard =
-  { up : Bool
-  , down : Bool
-  , left : Bool
-  , right : Bool
-  , space : Bool
-  , enter : Bool
-  , shift : Bool
-  , backspace : Bool
-  , keys : Set.Set String
+type alias Keyboard = {
+  up : Bool,
+  down : Bool,
+  left : Bool,
+  right : Bool,
+  space : Bool,
+  enter : Bool,
+  shift : Bool,
+  backspace : Bool,
+  keys : Set.Set String
   }
-
-
-{-| Turn the LEFT and RIGHT arrows into a number.
-
-    toX { left = False, right = False, ... } == 0
-    toX { left = True , right = False, ... } == -1
-    toX { left = False, right = True , ... } == 1
-    toX { left = True , right = True , ... } == 0
-
-So to make a square move left and right based on the arrow keys, we could say:
-
-    import Playground exposing (..)
-
-    main =
-      game view update 0
-
-    view computer x =
-      [ square green 40
-          |> moveX x
-      ]
-
-    update computer x =
-      x + toX computer.keyboard
-
--}
-toX : Keyboard -> Float
-toX keyboard =
-  (if keyboard.right then 1 else 0) - (if keyboard.left then 1 else 0)
-
-
-{-| Turn the UP and DOWN arrows into a number.
-
-    toY { up = False, down = False, ... } == 0
-    toY { up = True , down = False, ... } == 1
-    toY { up = False, down = True , ... } == -1
-    toY { up = True , down = True , ... } == 0
-
-This can be used to move characters around in games just like [`toX`](#toX):
-
-    import Playground exposing (..)
-
-    main =
-      game view update (0,0)
-
-    view computer (x,y) =
-      [ square blue 40
-          |> move x y
-      ]
-
-    update computer (x,y) =
-      ( x + toX computer.keyboard
-      , y + toY computer.keyboard
-      )
-
--}
-toY : Keyboard -> Float
-toY keyboard =
-  (if keyboard.up then 1 else 0) - (if keyboard.down then 1 else 0)
-
-
-{-| If you just use `toX` and `toY`, you will move diagonal too fast. You will go
-right at 1 pixel per update, but you will go up/right at 1.41421 pixels per
-update.
-
-So `toXY` turns the arrow keys into an `(x,y)` pair such that the distance is
-normalized:
-
-    toXY { up = True , down = False, left = False, right = False, ... } == (1, 0)
-    toXY { up = True , down = False, left = False, right = True , ... } == (0.707, 0.707)
-    toXY { up = False, down = False, left = False, right = True , ... } == (0, 1)
-
-Now when you go up/right, you are still going 1 pixel per update.
-
-    import Playground exposing (..)
-
-    main =
-      game view update (0,0)
-
-    view computer (x,y) =
-      [ square green 40
-          |> move x y
-      ]
-
-    update computer (x,y) =
-      let
-        (dx,dy) = toXY computer.keyboard
-      in
-      (x + dx, y + dy)
-
--}
-toXY : Keyboard -> (Float, Float)
-toXY keyboard =
-  let
-    x = toX keyboard
-    y = toY keyboard
-    multiplier = if x /= 0 && y /= 0 then sqrt 2 else 1
-  in
-    (x / multiplier, y / multiplier)
-
-
--- SCREEN
-
 
 {-| Get the dimensions of the screen. If the screen is 800 by 600, you will see
 a value like this:
-
-    { width = 800
-    , height = 600
-    , top = 300
-    , left = -400
-    , right = 400
-    , bottom = -300
+  {
+    width = 800,
+    height = 600,
+    top = 300,
+    left = -400,
+    right = 400,
+    bottom = -300
     }
-
-This can be nice when used with [`moveY`](#moveY) if you want to put something
-on the bottom of the screen, no matter the dimensions.
 -}
-type alias Screen =
-  { width : Float
-  , height : Float
-  , top : Float
-  , left : Float
-  , right : Float
-  , bottom : Float
+type alias Screen = {
+  width : Float,
+  height : Float,
+  top : Float,
+  left : Float,
+  right : Float,
+  bottom : Float
   }
-
-
-
--- TIME
-
-
-{-| The current time.
-
-Helpful when making an [`animation`](#animation) with functions like
-[`spin`](#spin), [`wave`](#wave), and [`zigzag`](#zigzag).
--}
-type Time = Time Time.Posix
 
 
 {-| Create an angle that cycles from 0 to 360 degrees over time.
@@ -278,7 +126,7 @@ Here is an [`animation`](#animation) with a spinning triangle:
 It will do a full rotation once every eight seconds. Try changing the `8` to
 a `2` to make it do a full rotation every two seconds. It moves a lot faster!
 -}
-spin : Float -> Time -> Float
+spin : Float -> Time.Posix -> Float
 spin period time = 360 * toFrac period time
 
 
@@ -298,82 +146,35 @@ Here is an [`animation`](#animation) with a circle that resizes:
 The radius of the circle will cycles between 50 and 90 every seven seconds.
 It kind of looks like it is breathing.
 -}
-wave : Float -> Float -> Float -> Time -> Float
+wave : Float -> Float -> Float -> Time.Posix -> Float
 wave lo hi period time = lo + (hi - lo) * (1 + cos (turns (toFrac period time))) / 2
 
-
-{-| Zig zag between two numbers.
-
-Here is an [`animation`](#animation) with a rectangle that tips back and forth:
-
-    import Playground exposing (..)
-
-    main =
-      animation view
-
-    view time =
-      [ rectangle lightGreen 20 100
-          |> rotate (zigzag -20 20 4 time)
-      ]
-
-It gets rotated by an angle. The angle cycles from -20 degrees to 20 degrees
-every four seconds.
--}
-zigzag : Float -> Float -> Float -> Time -> Float
+zigzag : Float -> Float -> Float -> Time.Posix -> Float
 zigzag lo hi period time = lo + (hi - lo) * abs (2 * toFrac period time - 1)
 
-
-toFrac : Float -> Time -> Float
-toFrac period (Time posix) =
+toFrac : Float -> Time.Posix -> Float
+toFrac period posix =
   let
     ms = Time.posixToMillis posix
     p = period * 1000
   in
     toFloat (modBy (round p) ms) / p
 
-
-
--- ANIMATION
-
-
-{-| Create an animation!
-
-Once you get comfortable using [`picture`](#picture) to layout shapes, you can
-try out an `animation`. Here is square that zigzags back and forth:
-
-    import Playground exposing (..)
-
-    main =
-      animation view
-
-    view time =
-      [ square blue 40
-          |> moveX (zigzag -100 100 2 time)
-      ]
-
-We need to define a `view` to make our animation work.
-
-Within `view` we can use functions like [`spin`](#spin), [`wave`](#wave),
-and [`zigzag`](#zigzag) to move and rotate our shapes.
--}
-animation : (Time -> List Shape) -> Program () Animation Msg
+animation : (Time.Posix -> List Shape) -> Program () Animation Msg
 animation viewFrame =
   let
     init () = (
-      Animation Events.Visible (toScreen 600 600) (Time (Time.millisToPosix 0)),
+      Animation Events.Visible (toScreen 600 600) (Time.millisToPosix 0),
       Task.perform GotViewport Dom.getViewport
       )
-
     view (Animation _ screen time) = {
       title = "Playground",
       body = [render screen (viewFrame time)]
       }
-
     update msg model = (
       animationUpdate msg model,
       Cmd.none
       )
-
     subscriptions (Animation visibility _ _) = case visibility of
         Events.Hidden -> Events.onVisibilityChange VisibilityChanged
         Events.Visible -> animationSubscriptions
@@ -386,7 +187,7 @@ animation viewFrame =
       }
 
 
-type Animation = Animation Events.Visibility Screen Time
+type Animation = Animation Events.Visibility Screen Time.Posix
 
 
 animationSubscriptions : Sub Msg
@@ -399,7 +200,7 @@ animationSubscriptions = Sub.batch [
 
 animationUpdate : Msg -> Animation -> Animation
 animationUpdate msg (Animation v s t as state) = case msg of
-    Tick posix             -> Animation v s (Time posix)
+    Tick posix             -> Animation v s posix
     VisibilityChanged vis  -> Animation vis s t
     GotViewport {viewport} -> Animation v (toScreen viewport.width viewport.height) t
     Resized w h            -> Animation v (toScreen (toFloat w) (toFloat h)) t
@@ -437,18 +238,6 @@ game viewMemory updateMemory initialMemory =
       subscriptions = subscriptions
       }
 
-
-initialComputer : Computer
-initialComputer = {
-  mouse = {
-    pos = (0, 0),
-    down = False,
-    click = False
-    },
-  keyboard = emptyKeyboard,
-  screen = toScreen 600 600,
-  time = Time (Time.millisToPosix 0)
-  }
 
 
 
@@ -490,24 +279,31 @@ type Msg =
 gameUpdate : (Computer -> memory -> memory) -> Msg -> Game memory -> Game memory
 gameUpdate updateMemory msg (Game vis memory computer) =
   case msg of
-    Tick time -> (if computer.mouse.click then
-        {computer | time = Time time, mouse = mouseClick False computer.mouse}
-      else
-        {computer | time = Time time}
-      ) |> Game vis (updateMemory computer memory)
-    GotViewport {viewport} -> Game vis memory { computer | screen = toScreen viewport.width viewport.height }
-    Resized w h -> Game vis memory { computer | screen = toScreen (toFloat w) (toFloat h) }
-    KeyChanged isDown key -> Game vis memory { computer | keyboard = updateKeyboard isDown key computer.keyboard }
+    Tick time -> 
+      let
+        computerTime = {computer | time = time}
+        newComputer =
+          (if computer.mouse.click then
+            {computerTime | mouse = mouseClick False computer.mouse}
+          else
+            computerTime)
+      in
+        Game vis (updateMemory computer memory) newComputer
+    GotViewport {viewport} -> Game vis memory {computer | screen = toScreen viewport.width viewport.height}
+    Resized w h -> Game vis memory {computer | screen = toScreen (toFloat w) (toFloat h)}
+    KeyChanged isDown key -> Game vis memory {computer | keyboard = updateKeyboard isDown key computer.keyboard}
     MouseMove pageX pageY ->
       let
         x = computer.screen.left + pageX
         y = computer.screen.top - pageY
+        mouseMove : (Float, Float) -> Mouse -> Mouse
+        mouseMove pos mouse = {mouse | pos = pos}
+        newMouse = mouseMove (x, y) computer.mouse
       in
-      Game vis memory { computer | mouse = mouseMove (x, y) computer.mouse }
-    MouseClick -> Game vis memory { computer | mouse = mouseClick True computer.mouse }
-    MouseButton isDown -> Game vis memory { computer | mouse = mouseDown isDown computer.mouse }
-    VisibilityChanged visibility -> Game visibility memory {
-      computer |
+        Game vis memory {computer | mouse = newMouse}
+    MouseClick -> Game vis memory {computer | mouse = mouseClick True computer.mouse}
+    MouseButton isDown -> Game vis memory {computer | mouse = mouseDown isDown computer.mouse}
+    VisibilityChanged visibility -> Game visibility memory {computer |
       keyboard = emptyKeyboard,
       mouse = Mouse computer.mouse.pos False False
       }
@@ -527,9 +323,6 @@ mouseClick bool mouse = {mouse | click = bool}
 
 mouseDown : Bool -> Mouse -> Mouse
 mouseDown bool mouse = {mouse | down = bool}
-
-mouseMove : (Float, Float) -> Mouse -> Mouse
-mouseMove pos mouse = {mouse | pos = pos}
 
 emptyKeyboard : Keyboard
 emptyKeyboard = {
