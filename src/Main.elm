@@ -216,8 +216,9 @@ render computer model =
     transforms = case model.mouseState of
       CameraMove cameraStart -> [Engine.move (Vec2.minus computer.mouse.pos cameraStart)]
       _ -> []
+    graphRender = edges ++ vertices ++ intersections
   in
-    background :: ((edges ++ vertices ++ intersections) |> List.map (applyTransforms transforms)) ++ [intersectionsText]
+    background :: (graphRender |> List.map (applyTransforms transforms)) ++ [intersectionsText]
 
 update : Engine.Computer -> Model -> Model
 update computer model =
