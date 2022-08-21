@@ -200,7 +200,7 @@ render computer model =
               tov = model.graph |> Graph.get to |> Maybe.map (\x -> x.node.label) |> Maybe.withDefault (0, 0) -- TODO: remove defaults
             in
               (fromv, tov))
-          |> List.map (\(x, y) -> Engine.path c model.graphicsConfig.edgeWidth [x, y])
+          |> List.map (\(x, y) -> Engine.path c (model.graphicsConfig.edgeWidth) [x, y])
         in
           (colorEdges model.graphicsConfig.notHeldEdgeColor notHeldEdges) ++
             (colorEdges model.graphicsConfig.heldEdgeColor heldEdges)
@@ -273,8 +273,10 @@ update computer model =
         |> List.filter (\{first, second} -> (Tuple.first first) /= i && (Tuple.second first) /= i && (Tuple.first second) /= i && (Tuple.second second) /= i)
         |> (++) updatedIntersections
       _ -> model.intersections
+    scale = 2 ^ (-computer.scroll / 1000)
+    gg = Graph.mapNodes (Vec2.multiply scale) movedVertices
   in {model |
-    graph = movedVertices,
+    graph = gg,
     mouseState = newMouseState,
     intersections = newIntersections,
     cameraShift = newCameraShift

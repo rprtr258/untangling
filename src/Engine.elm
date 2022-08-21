@@ -5,6 +5,7 @@ import Browser.Dom as Dom
 import Browser.Events as Events
 import Html
 import Html.Attributes as HA
+import Html.Events.Extra.Wheel as Wheel
 import Svg.Attributes as SA
 import Json.Decode as Decode
 import Task
@@ -13,32 +14,33 @@ import Set
 
 import Vec2
 
-picture : List Shape -> Program () Screen (Int, Int)
-picture shapes =
-  let
-    init () = (toScreen 600 600, Cmd.none)
-    view screen = {
-      title = "Playground",
-      body = [render screen shapes]
-      }
-    update (width,height) _ = (
-      toScreen (toFloat width) (toFloat height),
-      Cmd.none
-      )
-    subscriptions _ = Events.onResize Tuple.pair
-  in
-    Browser.document {
-      init = init,
-      view = view,
-      update = update,
-      subscriptions = subscriptions
-      }
+-- picture : List Shape -> Program () Screen (Int, Int)
+-- picture shapes =
+--   let
+--     init () = (toScreen 600 600, Cmd.none)
+--     view screen = {
+--       title = "Playground",
+--       body = [render screen shapes]
+--       }
+--     update (width,height) _ = (
+--       toScreen (toFloat width) (toFloat height),
+--       Cmd.none
+--       )
+--     subscriptions _ = Events.onResize Tuple.pair
+--   in
+--     Browser.document {
+--       init = init,
+--       view = view,
+--       update = update,
+--       subscriptions = subscriptions
+--       }
 
 type alias Computer = {
   mouse: Mouse,
   keyboard: Keyboard,
   screen: Screen,
-  time: Time.Posix
+  time: Time.Posix,
+  scroll: Float
   }
 
 initialComputer : Computer
@@ -50,7 +52,8 @@ initialComputer = {
     },
   keyboard = emptyKeyboard,
   screen = toScreen 600 600,
-  time = Time.millisToPosix 0
+  time = Time.millisToPosix 0,
+  scroll = 0
   }
 
 type alias Mouse = {
@@ -162,31 +165,31 @@ toFrac period posix =
   in
     toFloat (modBy (round p) ms) / p
 
-animation : (Time.Posix -> List Shape) -> Program () Animation Msg
-animation viewFrame =
-  let
-    init () = (
-      Animation Events.Visible (toScreen 600 600) (Time.millisToPosix 0),
-      Task.perform GotViewport Dom.getViewport
-      )
-    view (Animation _ screen time) = {
-      title = "Playground",
-      body = [render screen (viewFrame time)]
-      }
-    update msg model = (
-      animationUpdate msg model,
-      Cmd.none
-      )
-    subscriptions (Animation visibility _ _) = case visibility of
-        Events.Hidden -> Events.onVisibilityChange VisibilityChanged
-        Events.Visible -> animationSubscriptions
-  in
-    Browser.document {
-      init = init,
-      view = view,
-      update = update,
-      subscriptions = subscriptions
-      }
+-- animation : (Time.Posix -> List Shape) -> Program () Animation Msg
+-- animation viewFrame =
+--   let
+--     init () = (
+--       Animation Events.Visible (toScreen 600 600) (Time.millisToPosix 0),
+--       Task.perform GotViewport Dom.getViewport
+--       )
+--     view (Animation _ screen time) = {
+--       title = "Playground",
+--       body = [render screen (viewFrame time)]
+--       }
+--     update msg model = (
+--       animationUpdate msg model,
+--       Cmd.none
+--       )
+--     subscriptions (Animation visibility _ _) = case visibility of
+--         Events.Hidden -> Events.onVisibilityChange VisibilityChanged
+--         Events.Visible -> animationSubscriptions
+--   in
+--     Browser.document {
+--       init = init,
+--       view = view,
+--       update = update,
+--       subscriptions = subscriptions
+--       }
 
 
 type Animation = Animation Events.Visibility Screen Time.Posix
@@ -200,16 +203,16 @@ animationSubscriptions = Sub.batch [
   ]
 
 
-animationUpdate : Msg -> Animation -> Animation
-animationUpdate msg (Animation v s t as state) = case msg of
-    Tick posix             -> Animation v s posix
-    VisibilityChanged vis  -> Animation vis s t
-    GotViewport {viewport} -> Animation v (toScreen viewport.width viewport.height) t
-    Resized w h            -> Animation v (toScreen (toFloat w) (toFloat h)) t
-    KeyChanged _ _         -> state
-    MouseMove _            -> state
-    MouseClick             -> state
-    MouseButton _          -> state
+-- animationUpdate : Msg -> Animation -> Animation
+-- animationUpdate msg (Animation v s t as state) = case msg of
+--     Tick posix             -> Animation v s posix
+--     VisibilityChanged vis  -> Animation vis s t
+--     GotViewport {viewport} -> Animation v (toScreen viewport.width viewport.height) t
+--     Resized w h            -> Animation v (toScreen (toFloat w) (toFloat h)) t
+--     KeyChanged _ _         -> state
+--     MouseMove _            -> state
+--     MouseClick             -> state
+--     MouseButton _          -> state
 
 
 
@@ -270,6 +273,7 @@ type Msg =
   VisibilityChanged Events.Visibility |
   MouseMove Vec2.Vec2 |
   MouseClick |
+  Scroll Float |
   MouseButton Bool
 
 
@@ -304,6 +308,7 @@ gameUpdate updateMemory msg (Game vis memory computer) =
       keyboard = emptyKeyboard,
       mouse = Mouse computer.mouse.pos False False
       }
+    Scroll delta -> Game vis memory {computer | scroll = computer.scroll + delta}
 
 toScreen : Float -> Float -> Screen
 toScreen width height = {
@@ -662,8 +667,8 @@ be larger, you could say:
             |> scale 3
         ]
 -}
-scale_ : Float -> Transform -> Transform
-scale_ ns shape = {shape | scale = (shape.scale * ns)}
+scale : Float -> Transform -> Transform
+scale ns shape = {shape | scale = (shape.scale * ns)}
 
 
 {-| Rotate shapes in degrees.
@@ -797,7 +802,7 @@ rgb r g b =
   in
     Rgb (colorClamp r) (colorClamp g) (colorClamp b)
 
-render : Screen -> List Shape -> Html.Html msg
+render : Screen -> List Shape -> Html.Html Msg
 render screen shapes =
   let
     w = String.fromFloat screen.width
@@ -806,6 +811,7 @@ render screen shapes =
     y = String.fromFloat screen.bottom
   in
     Svg.svg [
+      Wheel.onWheel (\v -> Scroll v.deltaY),
       SA.viewBox (x ++ " " ++ y ++ " " ++ w ++ " " ++ h),
       HA.style "position" "fixed",
       HA.style "top" "0",
@@ -962,7 +968,7 @@ renderTransform : Transform -> String
 renderTransform shape =
   let
     translate = "translate(" ++ String.fromFloat shape.x ++ "," ++ String.fromFloat -shape.y ++ ")"
-    scale = if shape.scale == 1 then "" else " scale(" ++ String.fromFloat shape.scale ++ ")"
+    scale_ = if shape.scale == 1 then "" else " scale(" ++ String.fromFloat shape.scale ++ ")"
     angle = if shape.alpha == 0 then "" else " rotate(" ++ String.fromFloat -shape.angle ++ ")"
   in
-    translate ++ angle ++ scale
+    translate ++ angle ++ scale_
