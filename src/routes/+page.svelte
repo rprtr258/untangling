@@ -19,7 +19,7 @@
   let height;
   let mouseState: "up" // button is up
     | number // holding vertex by that index
-    | Vec2 = "up"; // moving camera by such vector
+    | "camera" = "up"; // moving camera by such vector
   let cameraShift: Vec2 = {x: 0, y: 0};
 
   // TODO: coords in [-1, -1] x [1, 1]
@@ -106,13 +106,15 @@
 
   function onMouseMove(e: MouseEvent) {
     if (typeof mouseState === "number") {
-      vertices[mouseState] = {x: e.clientX, y: e.clientY};
+      vertices[mouseState] = minus({x: e.clientX, y: e.clientY}, cameraShift);
+    } else if (mouseState === "camera") {
+      cameraShift = plus(cameraShift, {x: e.movementX, y: e.movementY});
     }
   }
 
   function onMouseDown(e: MouseEvent) {
     for (let i = 0; i < vertices.length; i++) {
-      const vertex = vertices[i];
+      const vertex = realVertices[i];
       const radii = minus(
         {x: e.clientX, y: e.clientY},
         vertex,
@@ -120,15 +122,17 @@
       // TODO: find closest
       if (dot(radii, radii) <= graphicsConfig.vertexRadius ** 2) {
         mouseState = i;
-        break;
+        return;
       }
     }
+    mouseState = "camera";
   }
 
   function onMouseUp(e: MouseEvent) {
     mouseState = "up";
   }
 
+  $: realVertices = vertices.map((v) => plus(v, cameraShift));
   $: intersections = (() => {
     let newIntersections = [];
     for (let i = 0; i < edges.length; i++) {
@@ -137,10 +141,10 @@
         const edge1 = edges[i];
         const edge2 = edges[j];
         const intersection = intersect(
-          vertices[edge1.from],
-          vertices[edge1.to],
-          vertices[edge2.from],
-          vertices[edge2.to],
+          realVertices[edge1.from],
+          realVertices[edge1.to],
+          realVertices[edge2.from],
+          realVertices[edge2.to],
         );
         if (intersection === null) {
           continue;
@@ -183,10 +187,10 @@
         fill="none"
         stroke="black"
         stroke-width={graphicsConfig.edgeWidth}
-        points={`${vertices[from].x},${vertices[from].y} ${vertices[to].x},${vertices[to].y}`}
+        points={`${realVertices[from].x},${realVertices[from].y} ${realVertices[to].x},${realVertices[to].y}`}
       />
     {/each}
-    {#each vertices as {x, y}}
+    {#each realVertices as {x, y}}
       <circle
         r={graphicsConfig.vertexRadius}
         fill={graphicsConfig.vertexColor}
