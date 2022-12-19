@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import {minus, plus, multiply, cross} from "./Vec2";
+  import {onMount} from "svelte";
+  import {minus, plus, multiply, cross, dot} from "./Vec2";
   import type {Vec2} from "./Vec2";
 
   const graphicsConfig = {
@@ -104,10 +104,33 @@
     };
   }
 
-  onMount(() => {
-    const xdd = generateGraph(40);
-    vertices = xdd.vertices;
-    edges = xdd.edges;
+  function onMouseMove(e: MouseEvent) {
+    if (typeof mouseState === "number") {
+      vertices[mouseState] = {x: e.clientX, y: e.clientY};
+    }
+  }
+
+  function onMouseDown(e: MouseEvent) {
+    for (let i = 0; i < vertices.length; i++) {
+      const vertex = vertices[i];
+      const radii = minus(
+        {x: e.clientX, y: e.clientY},
+        vertex,
+      );
+      // TODO: find closest
+      if (dot(radii, radii) <= graphicsConfig.vertexRadius ** 2) {
+        mouseState = i;
+        break;
+      }
+    }
+  }
+
+  function onMouseUp(e: MouseEvent) {
+    mouseState = "up";
+  }
+
+  $: intersections = (() => {
+    let newIntersections = [];
     for (let i = 0; i < edges.length; i++) {
       for (let j = 0; j < i; j++) {
         if (i == j) continue;
@@ -122,20 +145,29 @@
         if (intersection === null) {
           continue;
         }
-        intersections.push({
+        newIntersections.push({
           first: i,
           second: j,
           pt: intersection,
         });
       }
     }
-    intersections = intersections;
+    return newIntersections;
+  })();
+
+  onMount(() => {
+    const xdd = generateGraph(10);
+    vertices = xdd.vertices;
+    edges = xdd.edges;
   });
 </script>
 
 <div
   bind:clientWidth={width}
   bind:clientHeight={height}
+  on:mousemove={onMouseMove}
+  on:mousedown={onMouseDown}
+  on:mouseup={onMouseUp}
 >
   <svg
     width="100%"
@@ -174,7 +206,11 @@
       text-anchor="middle"
       transform={`translate(${width/2}, ${20})`}
     >
-      {intersections.length}
+      {#if intersections.length === 0}
+        vahui
+      {:else}
+        {intersections.length}
+      {/if}
     </text>
   </svg>
 </div>

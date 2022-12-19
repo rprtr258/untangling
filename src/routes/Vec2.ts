@@ -19,5 +19,9 @@ function cross(v: Vec2, w: Vec2): number {
   return v.x * w.y - v.y * w.x;
 }
 
-export {Vec2, minus, plus, multiply, cross};
+function dot(v: Vec2, w: Vec2): number {
+  return v.x * w.x + v.y * w.y;
+}
+
+export {Vec2, minus, plus, multiply, cross, dot};
 
