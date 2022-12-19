@@ -11,50 +11,12 @@ import Random.List
 
 -- TODO: move to engine
 type MouseState = Up | Vertex Graph.NodeId | CameraMove Vec2.Vec2
-type alias Vertex = Vec2.Vec2 -- TODO: coords in [-1, -1] x [1, 1]
-
-type alias Edge = (Graph.NodeId, Graph.NodeId)
-
-toEdge : Graph.Edge a -> Edge
-toEdge {from, to} = (from, to)
-
-type alias Intersection = {
-  first: Edge,
-  second: Edge,
-  pt: Vec2.Vec2
-  }
-
 type alias Model = {
   graphicsConfig: GraphicsConfig,
   mouseState: MouseState,
   cameraShift: Vec2.Vec2,
   graph: Graph.Graph Vertex (),
   intersections: List Intersection
-  }
-
-type alias GraphicsConfig = {
-  vertexRadius: Float,
-  vertexColor: Engine.Color,
-  edgeWidth: Float,
-  intersectionRadius: Float,
-  intersectionColor: Engine.Color,
-  heldEdgeColor: Engine.Color,
-  notHeldEdgeColor: Engine.Color,
-  textColor: Engine.Color,
-  backgroundColor: Engine.Color
-  }
-
-initGraphicsConfig : GraphicsConfig
-initGraphicsConfig = {
-  vertexRadius = 10,
-  vertexColor = Engine.palette.darkGrey,
-  edgeWidth = 3,
-  heldEdgeColor = Engine.Hex "#505060",
-  notHeldEdgeColor = Engine.palette.black,
-  intersectionRadius = 2,
-  intersectionColor = Engine.palette.red,
-  textColor = Engine.palette.white,
-  backgroundColor = Engine.palette.darkCharcoal
   }
 
 augmentEdgesWithEndsPositions : Graph.Graph Vertex () -> List (Graph.Edge ()) -> List (Graph.Edge (Vertex, Vertex))
@@ -217,7 +179,9 @@ render computer model =
       _ -> []) ++ [Engine.move model.cameraShift]
     graphRender = edges ++ vertices ++ intersections
   in
-    background :: (graphRender |> List.map (applyTransforms transforms)) ++ [intersectionsText]
+    background ::
+      (graphRender |> List.map (applyTransforms transforms)) ++
+      [intersectionsText]
 
 update : Engine.Computer -> Model -> Model
 update computer model =
