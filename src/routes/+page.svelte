@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import {minus, plus, multiply, cross} from "./Vec2";
   import type {Vec2} from "./Vec2";
 
@@ -22,7 +23,11 @@
   let cameraShift: Vec2 = {x: 0, y: 0};
 
   // TODO: coords in [-1, -1] x [1, 1]
-  let {vertices, edges} = generateGraph(7);
+  let vertices: Vec2[] = [];
+  let edges: {
+    from: number,
+    to: number,
+  }[] = [];
   let intersections: {
     // edges indexes
     first: number,
@@ -93,14 +98,19 @@
       }
     }
     return {
-      // vertices: generateVertices(n),
-      vertices: vertices,
+      vertices: generateVertices(n),
       edges: edges2.map(({i, j}) => {return {
         from: i,
         to: j,
       }}),
     };
   }
+
+  onMount(() => {
+    const xdd = generateGraph(7);
+    vertices = xdd.vertices;
+    edges = xdd.edges;
+  });
 </script>
 
 <div
