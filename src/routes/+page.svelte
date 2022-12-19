@@ -96,7 +96,6 @@
         })
       }
     }
-    console.log(vertices, allEdges)
     for (let i = allEdges.length - 1; i > 0; i--) {
       let j = Math.floor(Math.random() * (i + 1));
       let temp = allEdges[i];
@@ -106,11 +105,9 @@
     let edges2: typeof allEdges = [];
     for (let edge of allEdges) {
       if (edges2.every((bedge) => {
-        console.log(edge, bedge, intersect(edge, bedge));
         return intersect(edge, bedge) === null;
       })) {
         edges2.push(edge);
-        console.log(edge);
       }
     }
     return {
