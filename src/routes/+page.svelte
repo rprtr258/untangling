@@ -35,20 +35,21 @@
     pt: Vec2,
   }[] = [];
 
+  const EPS = 1e-6;
   function intersect(v1: Vec2, v2: Vec2, w1: Vec2, w2: Vec2): Vec2 | null {
     const w = minus(w2, w1);
     const v = minus(v2, v1);
-    const vw = minus(v1, w1);
-    const denom = cross(v, w);
-    if (denom == 0) {
+    const m = minus(v1, w1);
+    const delta = cross(v, w);
+    if (delta == 0) { // collinear
       return null;
     }
-    const ua = cross(w, vw) / denom;
-    const ub = cross(v, vw) / denom;
-    if (ua <= 0 || ua >= 1 || ub <= 0 || ub >= 1) {
+    const deltaA = cross(v, m) / delta;
+    const deltaB = cross(w, m) / delta;
+    if (deltaB <= EPS || deltaB >= 1-EPS || deltaA <= EPS || deltaA >= 1-EPS) {
       return null;
     }
-    return plus(v1, multiply(v, ua));
+    return plus(v1, multiply(v, deltaB));
   }
 
   function generateVertices(n: number) {
@@ -64,35 +65,39 @@
     let allEdges: {
       i: number,
       j: number,
-      from: Vec2,
-      to: Vec2,
     }[] = [];
     for (let i = 0; i < vertices.length; i++) {
       for (let j = 0; j < i; j++) {
-        allEdges.push({
-          i,
-          j,
-          from: vertices[i],
-          to: vertices[j],
-        })
+        allEdges.push({i, j});
       }
     }
-    for (let i = allEdges.length - 1; i > 0; i--) {
-      let j = Math.floor(Math.random() * (i + 1));
-      let temp = allEdges[i];
-      allEdges[i] = allEdges[j];
-      allEdges[j] = temp;
-    }
+    // for (let i = allEdges.length - 1; i > 0; i--) {
+    //   let j = Math.floor(Math.random() * (i + 1));
+    //   let temp = allEdges[i];
+    //   allEdges[i] = allEdges[j];
+    //   allEdges[j] = temp;
+    // }
     let edges2: typeof allEdges = [];
     for (let edge of allEdges) {
-      if (edges2.every((bedge) => {
-        return intersect(edge.from, edge.to, bedge.from, bedge.to) === null;
-      })) {
+      let arolf = false;
+      for (let bedge of edges2) {
+        if (intersect(
+          vertices[edge.i],
+          vertices[edge.j],
+          vertices[bedge.i],
+          vertices[bedge.j],
+        ) !== null) {
+          arolf = true;
+          break;
+        }
+      }
+      if (!arolf) {
         edges2.push(edge);
       }
     }
     return {
-      vertices: generateVertices(n),
+      // vertices: generateVertices(n),
+      vertices: vertices,
       edges: edges2.map(({i, j}) => {return {
         from: i,
         to: j,
@@ -106,6 +111,7 @@
     edges = xdd.edges;
     for (let i = 0; i < edges.length; i++) {
       for (let j = 0; j < i; j++) {
+        if (i == j) continue;
         const edge1 = edges[i];
         const edge2 = edges[j];
         const intersection = intersect(

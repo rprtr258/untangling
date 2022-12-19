@@ -3,20 +3,20 @@ type Vec2 = {
   y: number,
 };
 
-function minus(a: Vec2, b: Vec2): Vec2 {
-  return {x: a.x - b.x, y: a.y - b.y}
+function minus(v: Vec2, w: Vec2): Vec2 {
+  return {x: v.x - w.x, y: v.y - w.y}
 }
 
-function plus(a: Vec2, b: Vec2): Vec2 {
-  return {x: a.x + b.x, y: a.y + b.y}
+function plus(v: Vec2, w: Vec2): Vec2 {
+  return {x: v.x + w.x, y: v.y + w.y}
 }
 
 function multiply(v: Vec2, c: number): Vec2 {
   return {x: v.x * c, y: v.y * c};
 }
 
-function cross(a: Vec2, b: Vec2): number {
-  return a.x * b.y - a.y * b.x;
+function cross(v: Vec2, w: Vec2): number {
+  return v.x * w.y - v.y * w.x;
 }
 
 export {Vec2, minus, plus, multiply, cross};
