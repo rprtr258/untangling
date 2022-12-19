@@ -1,8 +1,6 @@
 <script lang="ts">
-  type Vec2 = {
-    x: number,
-    y: number,
-  };
+  import {minus, plus, multiply, cross} from "./Vec2";
+  import type {Vec2} from "./Vec2";
 
   const graphicsConfig = {
     vertexRadius: 10,
@@ -31,22 +29,6 @@
     second: number,
     pt: Vec2,
   }[] = [];
-
-  function minus(a: Vec2, b: Vec2): Vec2 {
-    return {x: a.x - b.x, y: a.y - b.y}
-  }
-
-  function plus(a: Vec2, b: Vec2): Vec2 {
-    return {x: a.x + b.x, y: a.y + b.y}
-  }
-
-  function multiply(v: Vec2, c: number): Vec2 {
-    return {x: v.x * c, y: v.y * c};
-  }
-
-  function cross(a: Vec2, b: Vec2): number {
-    return a.x * b.y - a.y * b.x;
-  }
 
   type tmp = {
     from: Vec2,
