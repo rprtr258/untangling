@@ -71,12 +71,12 @@
         allEdges.push({i, j});
       }
     }
-    // for (let i = allEdges.length - 1; i > 0; i--) {
-    //   let j = Math.floor(Math.random() * (i + 1));
-    //   let temp = allEdges[i];
-    //   allEdges[i] = allEdges[j];
-    //   allEdges[j] = temp;
-    // }
+    for (let i = allEdges.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      let temp = allEdges[i];
+      allEdges[i] = allEdges[j];
+      allEdges[j] = temp;
+    }
     let edges2: typeof allEdges = [];
     for (let edge of allEdges) {
       let arolf = false;
