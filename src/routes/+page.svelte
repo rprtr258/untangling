@@ -24,18 +24,7 @@
   let cameraShift: Vec2 = {x: 0, y: 0};
 
   // TODO: coords in [-1, -1] x [1, 1]
-  // let vertices: Vec2[] = [
-  //   {x: 10, y: 10},
-  //   {x: 100, y: 200},
-  // ];
-  // let edges: {
-  //   // vertices indexes
-  //   from: number,
-  //   to: number,
-  // }[] = [
-  //   {from: 0, to: 1},
-  // ];
-  let {vertices, edges} = generateGraph(10);
+  let {vertices, edges} = generateGraph(7);
   let intersections: {
     // edges indexes
     first: number,
@@ -75,7 +64,7 @@
     }
     const ua = cross(dw, dvw1) / denom;
     const ub = cross(dv, dvw1) / denom;
-    if (ua < 0 || ua > 1 || ub < 0 || ub > 1) {
+    if (ua <= 0 || ua >= 1 || ub <= 0 || ub >= 1) {
       return null;
     }
     return plus(v1, multiply(dv, ua));
@@ -84,7 +73,7 @@
   function generateVertices(n: number) {
     let vertices: Vec2[] = [];
     for (let i = 0; i < n; i++) {
-      vertices.push({x: Math.random() * 1000, y: Math.random() * 800})
+      vertices.push({x: Math.random() * 1000, y: Math.random() * 700})
     }
     return vertices;
   }
@@ -107,28 +96,27 @@
         })
       }
     }
+    console.log(vertices, allEdges)
     for (let i = allEdges.length - 1; i > 0; i--) {
       let j = Math.floor(Math.random() * (i + 1));
       let temp = allEdges[i];
       allEdges[i] = allEdges[j];
       allEdges[j] = temp;
     }
-    let edges = [allEdges[0]];
+    let edges2: typeof allEdges = [];
     for (let edge of allEdges) {
-      let intersects = false;
-      for (let bedge of edges) {
-        if (intersect(edge, bedge)) {
-          intersects = true;
-          break;
-        }
-      }
-      if (!intersects) {
-        edges.push(edge);
+      if (edges2.every((bedge) => {
+        console.log(edge, bedge, intersect(edge, bedge));
+        return intersect(edge, bedge) === null;
+      })) {
+        edges2.push(edge);
+        console.log(edge);
       }
     }
     return {
-      vertices: generateVertices(n),
-      edges: edges.map(({i, j}) => {return {
+      // vertices: generateVertices(n),
+      vertices: vertices,
+      edges: edges2.map(({i, j}) => {return {
         from: i,
         to: j,
       }}),
@@ -161,7 +149,11 @@
       }
     />
     {#each vertices as vertex}
-    	{vertex}
+      <circle
+        r={graphicsConfig.vertexRadius}
+        fill={graphicsConfig.vertexColor}
+        transform={`translate(${vertex.x},${vertex.y})`}
+      />
     {/each}
     {#each intersections as intersection}
     	{intersection}

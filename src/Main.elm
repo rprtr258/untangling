@@ -85,18 +85,12 @@ render computer model =
       |> Graph.nodes
       |> List.map .label
       |> List.map (\v -> Engine.circle model.graphicsConfig.vertexColor model.graphicsConfig.vertexRadius |> applyTransforms [Engine.move v])
-    intersectionCircle = Engine.circle model.graphicsConfig.intersectionColor model.graphicsConfig.intersectionRadius
-    intersections = model.intersections
-      |> List.map .pt
-      |> List.map (\v -> intersectionCircle |> applyTransforms [Engine.move v])
     transforms = (case model.mouseState of
       CameraMove cameraStart -> [Engine.move (Vec2.minus computer.mouse.pos cameraStart)]
       _ -> []) ++ [Engine.move model.cameraShift]
-    graphRender = edges ++ vertices ++ intersections
+    graphRender = intersections
   in
-    background ::
       (graphRender |> List.map (applyTransforms transforms)) ++
-      [intersectionsText]
 
 update : Engine.Computer -> Model -> Model
 update computer model =
