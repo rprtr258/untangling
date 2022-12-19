@@ -55,7 +55,7 @@
   function generateVertices(n: number) {
     let vertices: Vec2[] = [];
     for (let i = 0; i < n; i++) {
-      vertices.push({x: Math.random() * 1000, y: Math.random() * 700})
+      vertices.push({x: Math.random() * 1200, y: Math.random() * 700})
     }
     return vertices;
   }
@@ -96,8 +96,7 @@
       }
     }
     return {
-      // vertices: generateVertices(n),
-      vertices: vertices,
+      vertices: generateVertices(n),
       edges: edges2.map(({i, j}) => {return {
         from: i,
         to: j,
@@ -106,7 +105,7 @@
   }
 
   onMount(() => {
-    const xdd = generateGraph(7);
+    const xdd = generateGraph(40);
     vertices = xdd.vertices;
     edges = xdd.edges;
     for (let i = 0; i < edges.length; i++) {
@@ -147,17 +146,14 @@
       height="100%"
       fill={graphicsConfig.backgroundColor}
     />
-    <polyline
-      fill="none"
-      stroke="black"
-      stroke-width={graphicsConfig.edgeWidth}
-      points={
-        edges
-          .map((e) => [vertices[e.from], vertices[e.to]])
-          .map(([from, to]) => `${from.x},${from.y} ${to.x},${to.y}`)
-          .join(" ")
-      }
-    />
+    {#each edges as {from, to}}
+      <polyline
+        fill="none"
+        stroke="black"
+        stroke-width={graphicsConfig.edgeWidth}
+        points={`${vertices[from].x},${vertices[from].y} ${vertices[to].x},${vertices[to].y}`}
+      />
+    {/each}
     {#each vertices as {x, y}}
       <circle
         r={graphicsConfig.vertexRadius}
