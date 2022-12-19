@@ -9,47 +9,6 @@ augmentEdgesWithEndsPositions graph = List.map (\{from, to} ->
     label = (fromv, tov)
     })
 
-initModel : Model
-initModel =
-  let
-    graph = generateGraph (Random.initialSeed 12345) 20
-    intersections = graph
-      |> Graph.edges
-      |> augmentEdgesWithEndsPositions graph
-      |> squareList
-      |> List.filter (\(e1, e2) -> (e1.from /= e2.from && e1.from /= e2.to && e1.to /= e2.from && e1.to /= e2.to))
-      |> List.filter (\(e1, e2) -> ((e1.from, e1.to) < (e2.from, e2.to)))
-      |> List.filterMap (\(e1, e2) ->
-        let
-          (from1v, to1v) = e1.label
-          (from2v, to2v) = e2.label
-          pt = intersectEdges (from1v, to1v) (from2v, to2v)
-        in
-          Maybe.map (\p -> {
-            first = toEdge e1,
-            second = toEdge e2,
-            pt = p
-            }) pt)
-  in {
-    graph = graph,
-    mouseState = Up,
-    intersections = intersections,
-    graphicsConfig = initGraphicsConfig,
-    cameraShift = (0, 0)
-    }
-
-isJust : Maybe a -> Bool
-isJust x = case x of
-  Just _ -> True
-  Nothing -> False
-
-squareList : List a -> List (a, a)
-squareList xs = xs
-  |> List.concatMap (\x -> xs |> List.map (Tuple.pair x))
-
-main : Program () (Engine.Game Model) Engine.Msg
-main = Engine.game render update initModel
-
 applyTransforms : List (Engine.Transform -> Engine.Transform) -> Engine.Shape -> Engine.Shape
 applyTransforms fs shape = {shape | transform = (List.foldl (\f g -> \x -> x |> g |> f) identity fs) shape.transform}
 

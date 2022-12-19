@@ -35,26 +35,20 @@
     pt: Vec2,
   }[] = [];
 
-  type tmp = {
-    from: Vec2,
-    to: Vec2,
-  };
-  function intersect(v: tmp, w: tmp): Vec2 | null {
-    const v1 = v.from, v2 = v.to;
-    const w1 = w.from, w2 = w.to;
-    const dw = minus(w2, w1);
-    const dv = minus(v2, v1);
-    const dvw1 = minus(v1, w1);
-    const denom = cross(dv, dw);
+  function intersect(v1: Vec2, v2: Vec2, w1: Vec2, w2: Vec2): Vec2 | null {
+    const w = minus(w2, w1);
+    const v = minus(v2, v1);
+    const vw = minus(v1, w1);
+    const denom = cross(v, w);
     if (denom == 0) {
       return null;
     }
-    const ua = cross(dw, dvw1) / denom;
-    const ub = cross(dv, dvw1) / denom;
+    const ua = cross(w, vw) / denom;
+    const ub = cross(v, vw) / denom;
     if (ua <= 0 || ua >= 1 || ub <= 0 || ub >= 1) {
       return null;
     }
-    return plus(v1, multiply(dv, ua));
+    return plus(v1, multiply(v, ua));
   }
 
   function generateVertices(n: number) {
@@ -92,7 +86,7 @@
     let edges2: typeof allEdges = [];
     for (let edge of allEdges) {
       if (edges2.every((bedge) => {
-        return intersect(edge, bedge) === null;
+        return intersect(edge.from, edge.to, bedge.from, bedge.to) === null;
       })) {
         edges2.push(edge);
       }
@@ -110,6 +104,27 @@
     const xdd = generateGraph(7);
     vertices = xdd.vertices;
     edges = xdd.edges;
+    for (let i = 0; i < edges.length; i++) {
+      for (let j = 0; j < i; j++) {
+        const edge1 = edges[i];
+        const edge2 = edges[j];
+        const intersection = intersect(
+          vertices[edge1.from],
+          vertices[edge1.to],
+          vertices[edge2.from],
+          vertices[edge2.to],
+        );
+        if (intersection === null) {
+          continue;
+        }
+        intersections.push({
+          first: i,
+          second: j,
+          pt: intersection,
+        });
+      }
+    }
+    intersections = intersections;
   });
 </script>
 
@@ -128,7 +143,7 @@
     />
     <polyline
       fill="none"
-      stroke="red"
+      stroke="black"
       stroke-width={graphicsConfig.edgeWidth}
       points={
         edges
@@ -137,15 +152,19 @@
           .join(" ")
       }
     />
-    {#each vertices as vertex}
+    {#each vertices as {x, y}}
       <circle
         r={graphicsConfig.vertexRadius}
         fill={graphicsConfig.vertexColor}
-        transform={`translate(${vertex.x},${vertex.y})`}
+        transform={`translate(${x},${y})`}
       />
     {/each}
-    {#each intersections as intersection}
-    	{intersection}
+    {#each intersections as {pt}}
+    	<circle
+        r={graphicsConfig.intersectionRadius}
+        fill={graphicsConfig.intersectionColor}
+        transform={`translate(${pt.x},${pt.y})`}
+      />
     {/each}
     <text
       fill="white"
