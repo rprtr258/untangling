@@ -1,24 +1,3 @@
-module Main exposing (main)
-
-import Random
-import Graph
-
-import Vec2
-import Engine
-import IntDict
-import Random.List
-
-
--- TODO: move to engine
-type MouseState = Up | Vertex Graph.NodeId | CameraMove Vec2.Vec2
-type alias Model = {
-  graphicsConfig: GraphicsConfig,
-  mouseState: MouseState,
-  cameraShift: Vec2.Vec2,
-  graph: Graph.Graph Vertex (),
-  intersections: List Intersection
-  }
-
 augmentEdgesWithEndsPositions : Graph.Graph Vertex () -> List (Graph.Edge ()) -> List (Graph.Edge (Vertex, Vertex))
 augmentEdgesWithEndsPositions graph = List.map (\{from, to} ->
   let
@@ -58,70 +37,6 @@ initModel =
     graphicsConfig = initGraphicsConfig,
     cameraShift = (0, 0)
     }
-
-generateGraph : Random.Seed -> Int -> Graph.Graph Vertex ()
-generateGraph r0 n =
-  let
-    floatGenerator = Random.float -400 400
-    (vertices, r2) = n
-      |> List.range 1
-      |> List.foldl (\_ (xs, r1) ->
-        let
-          (x, r2_1) = (Random.step floatGenerator r1)
-          (y, r2_2) = (Random.step floatGenerator r2_1)
-        in
-          ((x, y) :: xs, r2_2)) ([], r0)
-      |> (\(xys, r3) ->
-        let
-          ixys = xys
-            |> List.indexedMap Tuple.pair
-            |> IntDict.fromList
-        in
-          (ixys, r3))
-    (vertices2, r5) = n
-      |> List.range 1
-      |> List.foldl (\_ (xs, rrr) ->
-        let
-          (x, rr1) = (Random.step floatGenerator rrr)
-          (y, rr2) = (Random.step floatGenerator rr1)
-        in
-          ((x, y) :: xs, rr2)) ([], r2)
-      |> (\(xys, r4) ->
-        let
-          ixys = xys
-            |> List.indexedMap Tuple.pair
-            |> IntDict.fromList
-        in
-          (ixys, r4))
-  in
-    n - 1
-      |> List.range 0
-      |> squareList
-      |> List.filter (\(i, j) -> i < j)
-      |> (\edges -> (Random.step (Random.List.shuffle edges) r5))
-      |> Tuple.first
-      |> List.map (\(i, j) ->
-        let
-          -- TODO: no default
-          vi = vertices |> IntDict.get i |> Maybe.withDefault (0, 0)
-          vj = vertices |> IntDict.get j |> Maybe.withDefault (0, 0)
-        in
-          ((i, j), (vi, vj)))
-      |> List.foldl (\((i, j), vij) edges ->
-        if
-          edges
-            |> List.filter (\((k, l), _) -> i /= k && i /= l && j /= k && j /= l)
-            |> List.map Tuple.second
-            |> List.map (intersectEdges vij)
-            |> List.any isJust
-        then
-          edges
-        else
-          ((i, j), vij) :: edges)
-        []
-      |> List.map Tuple.first
-      |> List.map (\(from, to) -> Graph.Edge from to ())
-      |> Graph.fromNodesAndEdges (vertices2 |> IntDict.values |> List.indexedMap Graph.Node)
 
 isJust : Maybe a -> Bool
 isJust x = case x of
@@ -245,26 +160,6 @@ update computer model =
     intersections = newIntersections,
     cameraShift = newCameraShift
     }
-
-intersectEdges : (Vertex, Vertex) -> (Vertex, Vertex) -> Maybe Vec2.Vec2
-intersectEdges (v1, v2) (w1, w2) =
-  let
-    dw = Vec2.minus w2 w1
-    dv = Vec2.minus v2 v1
-    dvw1 = Vec2.minus v1 w1
-    denom = Vec2.cross dv dw
-  in
-    if denom == 0 then -- collinear
-      Nothing
-    else
-      let
-        ua = (Vec2.cross dw dvw1) / denom
-        ub = (Vec2.cross dv dvw1) / denom
-      in
-        if ua < 0 || ua > 1 || ub < 0 || ub > 1 then -- out of range
-          Nothing
-        else
-          Just (Vec2.plus v1 (Vec2.multiply ua dv))
 
 -- TODO: take closest
 chooseVertex : List (Graph.NodeId, Vertex) -> Float -> Vec2.Vec2 -> Maybe Graph.NodeId
