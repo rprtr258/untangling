@@ -21,7 +21,7 @@
     | "camera" = "up"; // moving camera by such vector
 
   let zoom = 0;
-  $: zoomCoeff = Math.exp(zoom / 1000);
+  // camera position in screen coords
   let cameraShift: Vec2 = {x: 0, y: 0};
 
   let g: {
@@ -116,11 +116,18 @@
 
   function onMouseMove(e: MouseEvent) {
     if (typeof mouseState === "number") {
-      let mousePos: Vec2 = {x: e.clientX, y: e.clientY};
-      g.vertices[mouseState] = minus(mousePos, cameraShift);
+      const mouseZoomedPt: Vec2 = {x: e.clientX, y: e.clientY};
+      const mouseAbsolutePt: Vec2 = multiply(mouseZoomedPt, 1/zoomCoeff);
+      const mouseRelativePt: Vec2 = minus(mouseAbsolutePt, cameraShift);
+      const mouseNormPt: Vec2 = {
+        x: mouseRelativePt.x / screenSize.x,
+        y: mouseRelativePt.y / screenSize.y,
+      };
+      g.vertices[mouseState] = mouseNormPt;
     } else if (mouseState === "camera") {
-      let movement: Vec2 = {x: e.movementX, y: e.movementY};
-      cameraShift = plus(cameraShift, movement);
+      let movementZoomedPt: Vec2 = {x: e.movementX, y: e.movementY};
+      const movementAbsolutePt: Vec2 = multiply(movementZoomedPt, 1/zoomCoeff);
+      cameraShift = plus(cameraShift, movementAbsolutePt);
     }
   }
 
@@ -149,7 +156,18 @@
     mouseState = "up";
   }
 
-  $: realVertices = g.vertices.map((v) => plus(multiply(v, zoomCoeff), cameraShift));
+  $: zoomCoeff = Math.exp(zoom / 1000);
+
+  $: realVertices = g.vertices.map((v) => {
+    const screenRelativePt = {
+      x: v.x * screenSize.x,
+      y: v.y * screenSize.y,
+    };
+    const absolutePt = plus(screenRelativePt, cameraShift);
+    const zoomedPt = multiply(absolutePt, zoomCoeff);
+    return zoomedPt;
+  });
+
   $: intersections = (() => {
     let newIntersections = [];
     for (let i = 0; i < g.edges.length; i++) {
