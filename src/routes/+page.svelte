@@ -23,11 +23,16 @@
   let cameraShift: Vec2 = {x: 0, y: 0};
 
   // TODO: coords in [-1, -1] x [1, 1]
-  let vertices: Vec2[] = [];
-  let edges: {
-    from: number,
-    to: number,
-  }[] = [];
+  let g: {
+    vertices: Vec2[],
+    edges: {
+      from: number,
+      to: number,
+    }[],
+  } = {
+    vertices: [],
+    edges: [],
+  };
   let intersections: {
     // edges indexes
     first: number,
@@ -110,7 +115,7 @@
   function onMouseMove(e: MouseEvent) {
     if (typeof mouseState === "number") {
       let mousePos: Vec2 = {x: e.clientX, y: e.clientY};
-      vertices[mouseState] = minus(mousePos, cameraShift);
+      g.vertices[mouseState] = minus(mousePos, cameraShift);
     } else if (mouseState === "camera") {
       let movement: Vec2 = {x: e.movementX, y: e.movementY};
       cameraShift = plus(cameraShift, movement);
@@ -119,7 +124,7 @@
 
   function onMouseDown(e: MouseEvent) {
     let mousePos: Vec2 = {x: e.clientX, y: e.clientY};
-    for (let i = 0; i < vertices.length; i++) {
+    for (let i = 0; i < g.vertices.length; i++) {
       const vertex = realVertices[i];
       const radii = minus(mousePos, vertex);
       // TODO: find closest
@@ -135,14 +140,14 @@
     mouseState = "up";
   }
 
-  $: realVertices = vertices.map((v) => plus(v, cameraShift));
+  $: realVertices = g.vertices.map((v) => plus(v, cameraShift));
   $: intersections = (() => {
     let newIntersections = [];
-    for (let i = 0; i < edges.length; i++) {
+    for (let i = 0; i < g.edges.length; i++) {
       for (let j = 0; j < i; j++) {
         if (i == j) continue;
-        const edge1 = edges[i];
-        const edge2 = edges[j];
+        const edge1 = g.edges[i];
+        const edge2 = g.edges[j];
         const intersection = intersect(
           realVertices[edge1.from],
           realVertices[edge1.to],
@@ -163,9 +168,7 @@
   })();
 
   onMount(() => {
-    const xdd = generateGraph(10);
-    vertices = xdd.vertices;
-    edges = xdd.edges;
+    g = generateGraph(10);
   });
 </script>
 
@@ -185,7 +188,7 @@
       height="100%"
       fill={graphicsConfig.backgroundColor}
     />
-    {#each edges as {from, to}}
+    {#each g.edges as {from, to}}
       <polyline
         fill="none"
         stroke="black"
