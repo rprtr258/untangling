@@ -15,14 +15,17 @@
     backgroundColor: "#2e3436",
   };
 
-  let screenSize: Vec2 = {x: 0, y: 0};
+  let screenSize: Vec2 = {x: 1200, y: 700};
   let mouseState: "up" // button is up
     | number // holding vertex by that index
     | "camera" = "up"; // moving camera by such vector
+
+  let zoom = 0;
+  $: zoomCoeff = Math.exp(zoom / 1000);
   let cameraShift: Vec2 = {x: 0, y: 0};
 
-  // TODO: coords in [-1, -1] x [1, 1]
   let g: {
+    // coords in [0, 1] x [0, 1]
     vertices: Vec2[],
     edges: {
       from: number,
@@ -59,7 +62,7 @@
   function generateVertices(n: number) {
     let vertices: Vec2[] = [];
     for (let i = 0; i < n; i++) {
-      vertices.push({x: Math.random() * 1200, y: Math.random() * 700})
+      vertices.push({x: Math.random(), y: Math.random()})
     }
     return vertices;
   }
@@ -135,11 +138,18 @@
     mouseState = "camera";
   }
 
+  function onWheel(e: WheelEvent & {
+    currentTarget: EventTarget & SVGSVGElement,
+  }) {
+    e.preventDefault();
+    zoom -= e.deltaY;
+  }
+
   function onMouseUp(_: MouseEvent) {
     mouseState = "up";
   }
 
-  $: realVertices = g.vertices.map((v) => plus(v, cameraShift));
+  $: realVertices = g.vertices.map((v) => plus(multiply(v, zoomCoeff), cameraShift));
   $: intersections = (() => {
     let newIntersections = [];
     for (let i = 0; i < g.edges.length; i++) {
@@ -181,6 +191,7 @@
   <svg
     width="100%"
     height="100%"
+    on:wheel={onWheel}
   >
     <rect
       width="100%"
