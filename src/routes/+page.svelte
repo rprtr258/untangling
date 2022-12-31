@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount} from "svelte";
-  import {minus, plus, multiply, cross, dot} from "./Vec2";
+  import {minus, plus, multiply, cross, distSq} from "./Vec2";
   import type {Vec2} from "./Vec2";
 
   const graphicsConfig = {
@@ -60,67 +60,70 @@
     return vertices;
   }
 
+  function shuffle<T>(list: T[]): T[] {
+    for (let i = list.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      let temp = list[i];
+      list[i] = list[j];
+      list[j] = temp;
+    }
+    return list
+  }
+
   function generateGraph(n: number) {
     const vertices = generateVertices(n);
     let allEdges: {
-      i: number,
-      j: number,
+      from: number,
+      to: number,
     }[] = [];
     for (let i = 0; i < vertices.length; i++) {
       for (let j = 0; j < i; j++) {
-        allEdges.push({i, j});
+        allEdges.push({from: i, to: j});
       }
     }
-    for (let i = allEdges.length - 1; i > 0; i--) {
-      let j = Math.floor(Math.random() * (i + 1));
-      let temp = allEdges[i];
-      allEdges[i] = allEdges[j];
-      allEdges[j] = temp;
-    }
+    allEdges = shuffle(allEdges);
     let edges2: typeof allEdges = [];
     for (let edge of allEdges) {
-      let arolf = false;
+      let addsIntersection = false;
       for (let bedge of edges2) {
         if (intersect(
-          vertices[edge.i],
-          vertices[edge.j],
-          vertices[bedge.i],
-          vertices[bedge.j],
+          vertices[edge.from],
+          vertices[edge.to],
+          vertices[bedge.from],
+          vertices[bedge.to],
         ) !== null) {
-          arolf = true;
+          addsIntersection = true;
           break;
         }
       }
-      if (!arolf) {
+      // TODO: fix filtering too much edges
+      if (!addsIntersection) {
         edges2.push(edge);
       }
     }
     return {
       vertices: generateVertices(n),
-      edges: edges2.map(({i, j}) => {return {
-        from: i,
-        to: j,
-      }}),
+      edges: edges2,
     };
   }
 
   function onMouseMove(e: MouseEvent) {
     if (typeof mouseState === "number") {
-      vertices[mouseState] = minus({x: e.clientX, y: e.clientY}, cameraShift);
+      let mousePos: Vec2 = {x: e.clientX, y: e.clientY};
+      vertices[mouseState] = minus(mousePos, cameraShift);
     } else if (mouseState === "camera") {
-      cameraShift = plus(cameraShift, {x: e.movementX, y: e.movementY});
+      let movement: Vec2 = {x: e.movementX, y: e.movementY};
+      cameraShift = plus(cameraShift, movement);
     }
   }
 
   function onMouseDown(e: MouseEvent) {
+    let mousePos: Vec2 = {x: e.clientX, y: e.clientY};
     for (let i = 0; i < vertices.length; i++) {
       const vertex = realVertices[i];
-      const radii = minus(
-        {x: e.clientX, y: e.clientY},
-        vertex,
-      );
+      const radii = minus(mousePos, vertex);
       // TODO: find closest
-      if (dot(radii, radii) <= graphicsConfig.vertexRadius ** 2) {
+      if (distSq(radii) <= graphicsConfig.vertexRadius ** 2) {
         mouseState = i;
         return;
       }
@@ -128,7 +131,7 @@
     mouseState = "camera";
   }
 
-  function onMouseUp(e: MouseEvent) {
+  function onMouseUp(_: MouseEvent) {
     mouseState = "up";
   }
 
