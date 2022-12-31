@@ -128,7 +128,14 @@
     };
     switch (mouseState.type) {
     case "vertex":
-      g.vertices[mouseState.index] = mouseNormPt;
+      if (!selectedVertices.includes(mouseState.index)) {
+        g.vertices[mouseState.index] = mouseNormPt;
+      } else {
+        const move = minus(mouseNormPt, g.vertices[mouseState.index]);
+        for (const vertexIdx of selectedVertices) {
+          g.vertices[vertexIdx] = plus(g.vertices[vertexIdx], move);
+        }
+      }
       break;
     case "camera":
       let moveFinPt: Vec2 = {x: e.movementX, y: e.movementY};
@@ -291,7 +298,7 @@
     {#each realVertices as {x, y}, i}
       <circle
         r={graphicsConfig.vertexRadius}
-        fill={selectedVertices.indexOf(i) != -1 ? "#fa5b56" : graphicsConfig.vertexColor}
+        fill={selectedVertices.includes(i) ? "#fa5b56" : graphicsConfig.vertexColor}
         transform={`translate(${x},${y})`}
       />
     {/each}
