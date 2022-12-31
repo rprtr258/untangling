@@ -16,9 +16,12 @@
   };
 
   let screenSize: Vec2 = {x: 1200, y: 700};
-  let mouseState: "up" // button is up
+  let mouseState:
+    "up" // button is up
     | number // holding vertex by that index
-    | "camera" = "up"; // moving camera by such vector
+    | Vec2 // started group selection in that position
+    | "camera"
+    = "up"; // moving camera by such vector
 
   let zoom = 0;
   // camera position in screen coords
@@ -127,6 +130,7 @@
   }
 
   function onMouseDown(e: MouseEvent) {
+    e.preventDefault();
     let mousePos: Vec2 = {x: e.clientX, y: e.clientY};
     for (let i = 0; i < g.vertices.length; i++) {
       const vertex = realVertices[i];
@@ -201,12 +205,13 @@
   on:mousemove={onMouseMove}
   on:mousedown={onMouseDown}
   on:mouseup={onMouseUp}
+  on:contextmenu={(e)=>e.preventDefault()}
 >
   <svg
     width="100%"
     height="100%"
     on:wheel={onWheel}
-  >
+    >
     <rect
       width="100%"
       height="100%"
