@@ -17,11 +17,11 @@
 
   let screenSize: Vec2 = {x: 1200, y: 700};
   let mouseState:
-    "up" // button is up
-    | number // holding vertex by that index
-    | Vec2 // started group selection in that position
-    | "camera"
-    = "up"; // moving camera by such vector
+    {type: "up"} // button is up
+    | {type: "vertex", index: number} // holding vertex by that index
+    | {type: "select", begin: Vec2, end: Vec2} // group selection
+    | {type: "camera"}
+    = {type: "up"}; // moving camera by such vector
 
   let zoom = 0;
   // camera position in screen coords
@@ -112,36 +112,58 @@
   }
 
   function onMouseMove(e: MouseEvent) {
-    if (typeof mouseState === "number") {
-      const mouseFinPt: Vec2 = {x: e.clientX, y: e.clientY};
-      const halfPt = multiply(screenSize, 1/2);
-      const mouseAbsPt: Vec2 = plus(multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff), halfPt);
-      const mouseScreenPt: Vec2 = minus(mouseAbsPt, cameraPt);
-      const mouseNormPt: Vec2 = {
-        x: mouseScreenPt.x / screenSize.x,
-        y: mouseScreenPt.y / screenSize.y,
-      };
-      g.vertices[mouseState] = mouseNormPt;
-    } else if (mouseState === "camera") {
+    const mouseFinPt: Vec2 = {x: e.clientX, y: e.clientY};
+    const halfPt = multiply(screenSize, 1/2);
+    const mouseAbsPt: Vec2 = plus(multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff), halfPt);
+    const mouseScreenPt: Vec2 = minus(mouseAbsPt, cameraPt);
+    const mouseNormPt: Vec2 = {
+      x: mouseScreenPt.x / screenSize.x,
+      y: mouseScreenPt.y / screenSize.y,
+    };
+    switch (mouseState.type) {
+    case "vertex":
+      g.vertices[mouseState.index] = mouseNormPt;
+      break;
+    case "camera":
       let moveFinPt: Vec2 = {x: e.movementX, y: e.movementY};
       const moveAbsPt: Vec2 = multiply(moveFinPt, 1/zoomCoeff);
       cameraPt = plus(cameraPt, moveAbsPt);
+      break;
+    case "select":
+      mouseState.end = mouseNormPt;
+      mouseState = mouseState;
+      break;
     }
   }
 
   function onMouseDown(e: MouseEvent) {
     e.preventDefault();
-    let mousePos: Vec2 = {x: e.clientX, y: e.clientY};
-    for (let i = 0; i < g.vertices.length; i++) {
-      const vertex = realVertices[i];
-      const radii = minus(mousePos, vertex);
-      // TODO: find closest
-      if (distSq(radii) <= graphicsConfig.vertexRadius ** 2) {
-        mouseState = i;
-        return;
+    const mousePos: Vec2 = {x: e.clientX, y: e.clientY};
+    if (e.button == 0) { // LMB
+      for (let i = 0; i < g.vertices.length; i++) {
+        const vertex = realVertices[i];
+        const radii = minus(mousePos, vertex);
+        // TODO: find closest
+        if (distSq(radii) <= graphicsConfig.vertexRadius ** 2) {
+          mouseState = {type: "vertex", index: i};
+          return;
+        }
       }
+      mouseState = {type: "camera"};
+    } else if (e.button == 2) { // RMB
+      const halfPt = multiply(screenSize, 1/2);
+      const mouseAbsPt: Vec2 = plus(multiply(minus(mousePos, halfPt), 1/zoomCoeff), halfPt);
+      const mouseScreenPt: Vec2 = minus(mouseAbsPt, cameraPt);
+      const mouseNormPt: Vec2 = {
+        x: mouseScreenPt.x / screenSize.x,
+        y: mouseScreenPt.y / screenSize.y,
+      };
+      mouseState = {
+        type: "select",
+        begin: mouseNormPt,
+        end: mouseNormPt,
+      };
     }
-    mouseState = "camera";
   }
 
   function onWheel(e: WheelEvent & {
@@ -152,21 +174,34 @@
   }
 
   function onMouseUp(_: MouseEvent) {
-    mouseState = "up";
+    mouseState = {type: "up"};
   }
 
-  $: zoomCoeff = Math.exp(zoom / 1000);
-
-  $: realVertices = g.vertices.map((normPt) => {
+  function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
     const screenPt = {
-      x: normPt.x * screenSize.x,
-      y: normPt.y * screenSize.y,
+      x: pt.x * screenSize.x,
+      y: pt.y * screenSize.y,
     };
     const absPt = plus(screenPt, cameraPt);
     const halfPt = multiply(screenSize, 1/2);
     const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
     return finPt;
-  });
+  }
+
+  $: realSelect = (() => {
+    if (mouseState.type !== "select") {
+      return null;
+    }
+
+    return {
+      begin: normToFin(mouseState.begin, cameraPt, zoomCoeff),
+      end: normToFin(mouseState.end, cameraPt, zoomCoeff),
+    };
+  })();
+
+  $: zoomCoeff = Math.exp(zoom / 1000);
+
+  $: realVertices = g.vertices.map((v) => normToFin(v, cameraPt, zoomCoeff));
 
   $: intersections = (() => {
     let newIntersections = [];
@@ -239,6 +274,15 @@
         transform={`translate(${pt.x},${pt.y})`}
       />
     {/each}
+    {#if realSelect !== null}
+      <rect
+        width="{Math.abs(realSelect.end.x-realSelect.begin.x)}px"
+        height="{Math.abs(realSelect.end.y-realSelect.begin.y)}px"
+        x={Math.min(realSelect.begin.x, realSelect.end.x)}
+        y={Math.min(realSelect.begin.y, realSelect.end.y)}
+        fill="red"
+      />
+    {/if}
     <text
       fill="white"
       dominant-baseline="central"
@@ -250,6 +294,7 @@
       {:else}
         {intersections.length}
       {/if}
+      ,{JSON.stringify(mouseState)}
     </text>
   </svg>
 </div>
