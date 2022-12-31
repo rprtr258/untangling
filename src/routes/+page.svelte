@@ -265,7 +265,7 @@
   })();
 
   onMount(() => {
-    g = generateGraph(10);
+    g = generateGraph(30);
   });
 </script>
 
@@ -329,7 +329,6 @@
       {:else}
         {intersections.length}
       {/if}
-      ,{JSON.stringify(mouseState)}
     </text>
   </svg>
 </div>
