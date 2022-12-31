@@ -22,7 +22,7 @@
 
   let zoom = 0;
   // camera position in screen coords
-  let cameraShift: Vec2 = {x: 0, y: 0};
+  let cameraPt: Vec2 = {x: 0, y: 0};
 
   let g: {
     // coords in [0, 1] x [0, 1]
@@ -116,18 +116,18 @@
 
   function onMouseMove(e: MouseEvent) {
     if (typeof mouseState === "number") {
-      const mouseZoomedPt: Vec2 = {x: e.clientX, y: e.clientY};
-      const mouseAbsolutePt: Vec2 = multiply(mouseZoomedPt, 1/zoomCoeff);
-      const mouseRelativePt: Vec2 = minus(mouseAbsolutePt, cameraShift);
+      const mouseFinPt: Vec2 = {x: e.clientX, y: e.clientY};
+      const mouseAbsPt: Vec2 = multiply(mouseFinPt, 1/zoomCoeff);
+      const mouseScreenPt: Vec2 = minus(mouseAbsPt, cameraPt);
       const mouseNormPt: Vec2 = {
-        x: mouseRelativePt.x / screenSize.x,
-        y: mouseRelativePt.y / screenSize.y,
+        x: mouseScreenPt.x / screenSize.x,
+        y: mouseScreenPt.y / screenSize.y,
       };
       g.vertices[mouseState] = mouseNormPt;
     } else if (mouseState === "camera") {
-      let movementZoomedPt: Vec2 = {x: e.movementX, y: e.movementY};
-      const movementAbsolutePt: Vec2 = multiply(movementZoomedPt, 1/zoomCoeff);
-      cameraShift = plus(cameraShift, movementAbsolutePt);
+      let moveFinPt: Vec2 = {x: e.movementX, y: e.movementY};
+      const moveAbsPt: Vec2 = multiply(moveFinPt, 1/zoomCoeff);
+      cameraPt = plus(cameraPt, moveAbsPt);
     }
   }
 
@@ -158,14 +158,14 @@
 
   $: zoomCoeff = Math.exp(zoom / 1000);
 
-  $: realVertices = g.vertices.map((v) => {
-    const screenRelativePt = {
-      x: v.x * screenSize.x,
-      y: v.y * screenSize.y,
+  $: realVertices = g.vertices.map((normPt) => {
+    const screenPt = {
+      x: normPt.x * screenSize.x,
+      y: normPt.y * screenSize.y,
     };
-    const absolutePt = plus(screenRelativePt, cameraShift);
-    const zoomedPt = multiply(absolutePt, zoomCoeff);
-    return zoomedPt;
+    const absPt = plus(screenPt, cameraPt);
+    const finPt = multiply(absPt, zoomCoeff);
+    return finPt;
   });
 
   $: intersections = (() => {
