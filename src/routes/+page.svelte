@@ -23,9 +23,14 @@
     | {type: "camera"}
     = {type: "up"}; // moving camera by such vector
 
-  let zoom = 0;
-  // camera position in screen coords
-  let cameraPt: Vec2 = {x: 0, y: 0};
+  let camera: {
+    zoom: number,
+    // camera position in screen coords
+    shift: Vec2,
+  } = {
+    zoom: 0,
+    shift: {x: 0, y: 0},
+  }
 
   let g: {
     // coords in [0, 1] x [0, 1]
@@ -115,7 +120,7 @@
     const mouseFinPt: Vec2 = {x: e.clientX, y: e.clientY};
     const halfPt = multiply(screenSize, 1/2);
     const mouseAbsPt: Vec2 = plus(multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff), halfPt);
-    const mouseScreenPt: Vec2 = minus(mouseAbsPt, cameraPt);
+    const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
     const mouseNormPt: Vec2 = {
       x: mouseScreenPt.x / screenSize.x,
       y: mouseScreenPt.y / screenSize.y,
@@ -127,7 +132,7 @@
     case "camera":
       let moveFinPt: Vec2 = {x: e.movementX, y: e.movementY};
       const moveAbsPt: Vec2 = multiply(moveFinPt, 1/zoomCoeff);
-      cameraPt = plus(cameraPt, moveAbsPt);
+      camera.shift = plus(camera.shift, moveAbsPt);
       break;
     case "select":
       mouseState.end = mouseNormPt;
@@ -153,7 +158,7 @@
     } else if (e.button == 2) { // RMB
       const halfPt = multiply(screenSize, 1/2);
       const mouseAbsPt: Vec2 = plus(multiply(minus(mousePos, halfPt), 1/zoomCoeff), halfPt);
-      const mouseScreenPt: Vec2 = minus(mouseAbsPt, cameraPt);
+      const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
       const mouseNormPt: Vec2 = {
         x: mouseScreenPt.x / screenSize.x,
         y: mouseScreenPt.y / screenSize.y,
@@ -170,7 +175,7 @@
     currentTarget: EventTarget & SVGSVGElement,
   }) {
     e.preventDefault();
-    zoom -= e.deltaY;
+    camera.zoom -= e.deltaY;
   }
 
   function onMouseUp(_: MouseEvent) {
@@ -194,14 +199,14 @@
     }
 
     return {
-      begin: normToFin(mouseState.begin, cameraPt, zoomCoeff),
-      end: normToFin(mouseState.end, cameraPt, zoomCoeff),
+      begin: normToFin(mouseState.begin, camera.shift, zoomCoeff),
+      end: normToFin(mouseState.end, camera.shift, zoomCoeff),
     };
   })();
 
-  $: zoomCoeff = Math.exp(zoom / 1000);
+  $: zoomCoeff = Math.exp(camera.zoom / 1000);
 
-  $: realVertices = g.vertices.map((v) => normToFin(v, cameraPt, zoomCoeff));
+  $: realVertices = g.vertices.map((v) => normToFin(v, camera.shift, zoomCoeff));
 
   $: intersections = (() => {
     let newIntersections = [];
