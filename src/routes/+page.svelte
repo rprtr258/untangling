@@ -15,8 +15,7 @@
     backgroundColor: "#2e3436",
   };
 
-  let width;
-  let height;
+  let screenSize: Vec2 = {x: 0, y: 0};
   let mouseState: "up" // button is up
     | number // holding vertex by that index
     | "camera" = "up"; // moving camera by such vector
@@ -173,8 +172,8 @@
 </script>
 
 <div
-  bind:clientWidth={width}
-  bind:clientHeight={height}
+  bind:clientWidth={screenSize.x}
+  bind:clientHeight={screenSize.y}
   on:mousemove={onMouseMove}
   on:mousedown={onMouseDown}
   on:mouseup={onMouseUp}
@@ -214,7 +213,7 @@
       fill="white"
       dominant-baseline="central"
       text-anchor="middle"
-      transform={`translate(${width/2}, ${20})`}
+      transform={`translate(${screenSize.x/2}, ${20})`}
     >
       {#if intersections.length === 0}
         vahui
