@@ -276,11 +276,11 @@
     {/each}
     {#if realSelect !== null}
       <rect
+        id="select"
         width="{Math.abs(realSelect.end.x-realSelect.begin.x)}px"
         height="{Math.abs(realSelect.end.y-realSelect.begin.y)}px"
         x={Math.min(realSelect.begin.x, realSelect.end.x)}
         y={Math.min(realSelect.begin.y, realSelect.end.y)}
-        fill="red"
       />
     {/if}
     <text
@@ -306,5 +306,11 @@
   }
   :global(div, html) {
     height: 100%;
+  }
+  #select {
+    fill: none;
+    stroke-width: .2rem;
+    stroke: #ff1612;
+    stroke-dasharray: .3rem .4rem 1rem .4rem;
   }
 </style>
