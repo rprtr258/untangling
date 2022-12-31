@@ -43,6 +43,7 @@
     vertices: [],
     edges: [],
   };
+  let selectedVertices: number[] = [];
 
   const EPS = 1e-6;
   function intersect(v1: Vec2, v2: Vec2, w1: Vec2, w2: Vec2): Vec2 | null {
@@ -137,6 +138,26 @@
     case "select":
       mouseState.end = mouseNormPt;
       mouseState = mouseState;
+      selectedVertices = ((): number[] => {
+        if (mouseState.type !== "select") {
+          return [];
+        }
+
+        const minX = Math.min(mouseState.begin.x, mouseState.end.x);
+        const maxX = Math.max(mouseState.begin.x, mouseState.end.x);
+        const minY = Math.min(mouseState.begin.y, mouseState.end.y);
+        const maxY = Math.max(mouseState.begin.y, mouseState.end.y);
+
+        let res = [];
+        for (let i = 0; i < g.vertices.length; i++) {
+          const v = g.vertices[i];
+          if (v.x < minX || v.x > maxX || v.y < minY || v.y > maxY) {
+            continue;
+          }
+          res.push(i);
+        }
+        return res;
+      })();
       break;
     }
   }
@@ -206,7 +227,9 @@
 
   $: zoomCoeff = Math.exp(camera.zoom / 1000);
 
-  $: realVertices = g.vertices.map((v) => normToFin(v, camera.shift, zoomCoeff));
+  $: realVertices = g.vertices.map((v) => {
+    return normToFin(v, camera.shift, zoomCoeff);
+  });
 
   $: intersections = (() => {
     let newIntersections = [];
@@ -265,10 +288,10 @@
         points={`${realVertices[from].x},${realVertices[from].y} ${realVertices[to].x},${realVertices[to].y}`}
       />
     {/each}
-    {#each realVertices as {x, y}}
+    {#each realVertices as {x, y}, i}
       <circle
         r={graphicsConfig.vertexRadius}
-        fill={graphicsConfig.vertexColor}
+        fill={selectedVertices.indexOf(i) != -1 ? "#fa5b56" : graphicsConfig.vertexColor}
         transform={`translate(${x},${y})`}
       />
     {/each}
