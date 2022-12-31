@@ -35,12 +35,6 @@
     vertices: [],
     edges: [],
   };
-  let intersections: {
-    // edges indexes
-    first: number,
-    second: number,
-    pt: Vec2,
-  }[] = [];
 
   const EPS = 1e-6;
   function intersect(v1: Vec2, v2: Vec2, w1: Vec2, w2: Vec2): Vec2 | null {
