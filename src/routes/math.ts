@@ -24,7 +24,7 @@ export function y(v: Vec3): number {
   return v[1] / v[2];
 }
 
-export function combine(first: Mat3, second: Mat3): Mat3 {
+export function compose(first: Mat3, second: Mat3): Mat3 {
   let res = [
     [0, 0, 0],
     [0, 0, 0],
@@ -46,6 +46,28 @@ export function apply(m: Mat3, v: Vec3): Vec3 {
     m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
     m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2],
   ];
+}
+
+export function invert(m: Mat3): Mat3 {
+  const a = m[0][0];
+  const b = m[0][1];
+  const c = m[0][2];
+  const d = m[1][0];
+  const e = m[1][1];
+  const f = m[1][2];
+  const g = m[2][0];
+  const h = m[2][1];
+  const i = m[2][2];
+  const invDet = 1 / (a*(e*i - f*h) - b*(d*i - f*g) + c*(d*h - e*g));
+  return compose([
+    [e*i - f*h, c*h - b*i, b*f - c*e],
+    [f*g - d*i, a*i - c*g, c*d - a*f],
+    [d*h - e*g, b*g - a*h, a*e - b*d],
+  ], [
+    [invDet,      0,      0],
+    [     0, invDet,      0],
+    [     0,      0, invDet],
+  ]);
 }
 
 export function translate(v: Vec2): Mat3 {
