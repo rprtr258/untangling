@@ -26,4 +26,3 @@ export function dot(v: Vec2, w: Vec2): number {
 export function distSq(v: Vec2): number {
   return dot(v, v);
 }
-

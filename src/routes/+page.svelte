@@ -120,7 +120,10 @@
   function onMouseMove(e: MouseEvent) {
     const mouseFinPt: Vec2 = {x: e.clientX, y: e.clientY};
     const halfPt = multiply(screenSize, 1/2);
-    const mouseAbsPt: Vec2 = plus(multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff), halfPt);
+    const mouseAbsPt: Vec2 = plus(
+      multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff),
+      halfPt,
+    );
     const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
     const mouseNormPt: Vec2 = {
       x: mouseScreenPt.x / screenSize.x,
@@ -185,7 +188,10 @@
       mouseState = {type: "camera"};
     } else if (e.button == 2) { // RMB
       const halfPt = multiply(screenSize, 1/2);
-      const mouseAbsPt: Vec2 = plus(multiply(minus(mousePos, halfPt), 1/zoomCoeff), halfPt);
+      const mouseAbsPt: Vec2 = plus(
+        multiply(minus(mousePos, halfPt), 1/zoomCoeff),
+        halfPt,
+      );
       const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
       const mouseNormPt: Vec2 = {
         x: mouseScreenPt.x / screenSize.x,
