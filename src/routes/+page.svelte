@@ -3,7 +3,7 @@
   import {
     minus, plus, distSq,
     scaleXY, translate, scale,
-    unembed, apply, embed, compose, invert, intersect, poop,
+    unembed, apply, embed, compose, invert, intersect, poop, minmax,
   } from "./math";
   import type {Vec2, Vec3, Mat3} from "./math";
 
@@ -145,10 +145,8 @@
           return [];
         }
 
-        const minX = Math.min(mouseState.begin[0], mouseState.end[0]);
-        const maxX = Math.max(mouseState.begin[0], mouseState.end[0]);
-        const minY = Math.min(mouseState.begin[1], mouseState.end[1]);
-        const maxY = Math.max(mouseState.begin[1], mouseState.end[1]);
+        const [minX, maxX] = minmax(mouseState.begin[0], mouseState.end[0]);
+        const [minY, maxY] = minmax(mouseState.begin[1], mouseState.end[1]);
 
         let res = [];
         for (let i = 0; i < g.vertices.length; i++) {

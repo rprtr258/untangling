@@ -125,7 +125,9 @@ export function intersect([v1, v2]: [Vec2, Vec2], [w1, w2]: [Vec2, Vec2]): Vec2 
   return plus(v1, multiply(v, deltaB));
 }
 
-// =============== old ==============
+export function minmax(x: number, y: number): [number, number] {
+  return x < y ? [x, y] : [y, x];
+}
 
 export function minus(v: Vec2, w: Vec2): Vec2 {
   return [v[0] - w[0], v[1] - w[1]];
