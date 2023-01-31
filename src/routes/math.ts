@@ -108,7 +108,7 @@ export function scale(coeff: number): Mat3 {
 
 const EPS = 1e-6;
 // intersect two line segments v1-v2 and w1-w2
-export function intersect(v1: Vec2, v2: Vec2, w1: Vec2, w2: Vec2): Vec2 | null {
+export function intersect([v1, v2]: [Vec2, Vec2], [w1, w2]: [Vec2, Vec2]): Vec2 | null {
   const w = minus(w2, w1);
   const v = minus(v2, v1);
   const m = minus(v1, w1);

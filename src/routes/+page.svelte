@@ -81,10 +81,8 @@
       let addsIntersection = false;
       for (let edge2 of edges2) {
         if (intersect(
-          vertices[edge1.from],
-          vertices[edge1.to],
-          vertices[edge2.from],
-          vertices[edge2.to],
+          [vertices[edge1.from], vertices[edge1.to]],
+          [vertices[edge2.from], vertices[edge2.to]],
         ) !== null) {
           addsIntersection = true;
           break;
@@ -253,10 +251,8 @@
         const edge1 = g.edges[i];
         const edge2 = g.edges[j];
         const intersection = intersect(
-          realVertices[edge1.from],
-          realVertices[edge1.to],
-          realVertices[edge2.from],
-          realVertices[edge2.to],
+          [realVertices[edge1.from], realVertices[edge1.to]],
+          [realVertices[edge2.from], realVertices[edge2.to]],
         );
         if (intersection === null) {
           continue;
