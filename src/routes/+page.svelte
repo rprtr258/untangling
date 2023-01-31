@@ -15,7 +15,7 @@
     intersectionColor: "#cc0000",
     heldEdgeColor: "#505060",
     notHeldEdgeColor: "#000000",
-    textColor: "white",
+    textColor: "#ffffff",
     backgroundColor: "#2e3436",
   };
 
