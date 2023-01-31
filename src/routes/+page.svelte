@@ -3,7 +3,7 @@
   import {
     minus, plus, distSq,
     scaleXY, translate, scale,
-    unembed, apply, embed, compose, invert, intersect, poop, minmax,
+    unembed, apply, embed, compose, invert, intersect, poop, minmax, eye,
   } from "./math";
   import type {Vec2, Vec3, Mat3} from "./math";
 
@@ -30,10 +30,10 @@
   let camera: {
     zoom: number,
     // camera position in screen coords
-    shift: Vec2,
+    shift: Mat3,
   } = {
     zoom: 0,
-    shift: [0,0],
+    shift: eye,
     //shift: [screenSize.width / 2, screenSize.height / 2],
   };
 
@@ -109,7 +109,7 @@
         invert(halfPtTranslate),
         scale(1/zoomCoeff),
         halfPtTranslate,
-        invert(translate(camera.shift)),
+        invert(camera.shift),
         invert(scaleXY(screenSize)),
       ),
       embed(mouseFinPt),
@@ -132,10 +132,10 @@
         invert(scale(zoomCoeff)),
         embed(moveFinPt),
       ));
-      camera.shift = unembed(apply(
+      camera.shift = compose(
         translate(moveAbsPt),
-        embed(camera.shift),
-      ));
+        camera.shift,
+      );
       break;
     case "select":
       mouseState.end = mouseNormPt;
@@ -200,14 +200,14 @@
     mouseState = {type: "up"};
   }
 
-  function normToFin(cameraPt: Vec2, zoomCoeff: number): Mat3 {
+  function normToFin(cameraShift: Mat3, zoomCoeff: number): Mat3 {
     const halfPtTranslate = translate([
       screenSize[0] / 2,
       screenSize[1] / 2,
     ]);
     return compose(
       scaleXY(screenSize),
-      translate(cameraPt),
+      cameraShift,
       invert(halfPtTranslate),
       scale(zoomCoeff),
       halfPtTranslate,

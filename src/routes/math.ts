@@ -4,6 +4,8 @@ export type Mat3 = [
   [number, number, number]
 ];
 
+export const eye = translate([0, 0]);
+
 export type Vec2 = [number, number];
 
 export type Vec3 = [number, number, number];
