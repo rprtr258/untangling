@@ -15,7 +15,7 @@
     backgroundColor: "#2e3436",
   };
 
-  let screenSize = {width: 1200, height: 700};
+  let screenSize: Vec2 = [1200, 700];
   let mouseState:
     {type: "up"} // button is up
     | {type: "vertex", index: number} // holding vertex by that index
@@ -29,7 +29,8 @@
     shift: Vec2,
   } = {
     zoom: 0,
-    shift: [screenSize.width / 2, screenSize.height / 2],
+    shift: [0,0],
+    //shift: [screenSize.width / 2, screenSize.height / 2],
   };
 
   let g: {
@@ -119,15 +120,15 @@
 
   function onMouseMove(e: MouseEvent) {
     const mouseFinPt: Vec2 = [e.clientX, e.clientY];
-    const halfPt: Vec2 = [screenSize.width/2, screenSize.height/2];
+    const halfPt = multiply(screenSize, 1/2);
     const mouseAbsPt: Vec2 = plus(
       multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff),
       halfPt,
     );
     const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
     const mouseNormPt: Vec2 = [
-      mouseScreenPt[0] / screenSize.width,
-      mouseScreenPt[1] / screenSize.height,
+      mouseScreenPt[0] / screenSize[0],
+      mouseScreenPt[1] / screenSize[1],
     ];
     switch (mouseState.type) {
     case "vertex":
@@ -187,15 +188,15 @@
       }
       mouseState = {type: "camera"};
     } else if (e.button == 2) { // RMB
-      const halfPt: Vec2 = [screenSize.width/2, screenSize.height/2];
+      const halfPt = multiply(screenSize, 1/2);
       const mouseAbsPt: Vec2 = plus(
         multiply(minus(mousePos, halfPt), 1/zoomCoeff),
         halfPt,
       );
       const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
       const mouseNormPt: Vec2 = [
-        mouseScreenPt[0] / screenSize.width,
-        mouseScreenPt[1] / screenSize.height,
+        mouseScreenPt[0] / screenSize[0],
+        mouseScreenPt[1] / screenSize[1],
       ];
       mouseState = {
         type: "select",
@@ -218,11 +219,11 @@
 
   function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
     const screenPt: Vec2 = [
-      pt[0] * screenSize.width,
-      pt[0] * screenSize.height,
+      pt[0] * screenSize[0],
+      pt[1] * screenSize[1],
     ];
     const absPt = plus(screenPt, cameraPt);
-    const halfPt: Vec2 = [screenSize.width/2, screenSize.height/2];
+    const halfPt = multiply(screenSize, 1/2);
     const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
     return finPt;
   }
@@ -272,16 +273,16 @@
 
   onMount(() => {
     g = generateGraph(10);
-    camera = {
-      zoom: 0,
-      shift: [screenSize.width / 2, screenSize.height / 2],
-    };
+    // camera = {
+    //   zoom: 0,
+    //   shift: [screenSize.width / 2, screenSize.height / 2],
+    // };
   });
 </script>
 
 <div
-  bind:clientWidth={screenSize.width}
-  bind:clientHeight={screenSize.height}
+  bind:clientWidth={screenSize[0]}
+  bind:clientHeight={screenSize[1]}
   on:mousemove={onMouseMove}
   on:mousedown={onMouseDown}
   on:mouseup={onMouseUp}
@@ -332,7 +333,7 @@
       fill="white"
       dominant-baseline="central"
       text-anchor="middle"
-      transform={`translate(${screenSize.width/2}, ${20})`}
+      transform={`translate(${screenSize[0]/2}, ${20})`}
     >
       {#if intersections.length === 0}
         vahui

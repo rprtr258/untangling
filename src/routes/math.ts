@@ -8,6 +8,10 @@ export type Vec2 = [number, number];
 
 export type Vec3 = [number, number, number];
 
+export function embed(v: Vec2): Vec3 {
+  return [v[0], v[1], 1];
+}
+
 export function x(v: Vec3): number {
   return v[0] / v[2];
 }
@@ -40,6 +44,14 @@ export function apply(m: Mat3, v: Vec3): Vec3 {
   ];
 }
 
+export function translate(v: Vec2): Mat3 {
+  return [
+    [1, 0, v[0]],
+    [0, 1, v[1]],
+    [0, 0, 1],
+  ];
+}
+
 // =============== old ==============
 
 export function minus(v: Vec2, w: Vec2): Vec2 {
@@ -47,7 +59,11 @@ export function minus(v: Vec2, w: Vec2): Vec2 {
 }
 
 export function plus(v: Vec2, w: Vec2): Vec2 {
-  return [v[0] + w[0], v[1] + w[1]];
+  const u = apply(
+    translate(w),
+    embed(v),
+  );
+  return [u[0], u[1]];
 }
 
 export function multiply(v: Vec2, c: number): Vec2 {
