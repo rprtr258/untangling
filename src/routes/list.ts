@@ -16,11 +16,11 @@ export function generate<T>(n: number, next: () => T): T[] {
 
 export function filterMap<T, R>(
     collection: T[],
-    f: (x: T) => [R, boolean]
+    f: (x: T, i: number) => [R, boolean]
 ): R[] {
     let res: R[] = [];
-    for (let x of collection) {
-        const [y, ok] = f(x);
+    for (let i = 0; i < collection.length; i++) {
+        const [y, ok] = f(collection[i], i);
         if (!ok) {
             continue;
         }

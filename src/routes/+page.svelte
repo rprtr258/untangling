@@ -123,27 +123,16 @@
     case "select":
       mouseState.end = mouseNormPt;
       mouseState = mouseState;
-      selectedVertices = ((): number[] => {
-        const [minX, maxX] = minmax(mouseState.begin[0], mouseState.end[0]);
-        const [minY, maxY] = minmax(mouseState.begin[1], mouseState.end[1]);
-        let res = [];
-        for (let i = 0; i < g.vertices.length; i++) {
-          const v = g.vertices[i];
-          if (v[0] < minX || v[0] > maxX || v[1] < minY || v[1] > maxY) {
-            continue;
-          }
-          res.push(i);
-        }
-        return res;
-        // return filterMap(
-        //   g.vertices,
-        //   (v, i) => [
-        //     i,
-        //     v[0] >= minX && v[0] <= maxX &&
-        //     v[1] >= minY && v[1] <= maxY,
-        //   ],
-        // );
-      })();
+      const [minX, maxX] = minmax(mouseState.begin[0], mouseState.end[0]);
+      const [minY, maxY] = minmax(mouseState.begin[1], mouseState.end[1]);
+      selectedVertices = filterMap(
+        g.vertices,
+        (v, i) => [
+          i,
+          v[0] >= minX && v[0] <= maxX &&
+          v[1] >= minY && v[1] <= maxY,
+        ],
+      );
       break;
     }
   }
