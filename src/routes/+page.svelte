@@ -58,16 +58,13 @@
 
   function generateGraph(n: number) {
     const vertices = generateVertices(n);
-    let allEdges: {
-      from: number,
-      to: number,
-    }[] = [];
-    for (let i = 0; i < vertices.length; i++) {
-      for (let j = 0; j < i; j++) {
-        allEdges.push({from: i, to: j});
-      }
-    }
-    allEdges = shuffle(allEdges);
+    const allEdges = shuffle(generate(
+      vertices.length,
+      i => generate(
+        i,
+        j => {return {from: i, to: j}},
+      ),
+    ).flat());
     let edges2: typeof allEdges = [];
     for (let edge1 of allEdges) {
       // TODO: fix filtering too much edges

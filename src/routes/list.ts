@@ -6,10 +6,10 @@ export function shuffle<T>(list: T[]): T[] {
     return list
 }
 
-export function generate<T>(n: number, next: () => T): T[] {
+export function generate<T>(n: number, next: (i: number) => T): T[] {
     let res: T[] = [];
     for (let i = 0; i < n; i++) {
-      res.push(next());
+      res.push(next(i));
     }
     return res;
 }
