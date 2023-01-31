@@ -119,9 +119,10 @@
       if (!selectedVertices.includes(mouseState.index)) {
         g.vertices[mouseState.index] = mouseNormPt;
       } else {
-        const move = minus(mouseNormPt, g.vertices[mouseState.index]);
+        const diff = minus(mouseNormPt, g.vertices[mouseState.index]);
+        const move = translate(diff);
         for (const vertexIdx of selectedVertices) {
-          g.vertices[vertexIdx] = plus(g.vertices[vertexIdx], move);
+          g.vertices[vertexIdx] = poop(move, g.vertices[vertexIdx]);
         }
       }
       break;

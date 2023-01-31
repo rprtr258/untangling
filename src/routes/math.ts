@@ -128,24 +128,15 @@ export function intersect([v1, v2]: [Vec2, Vec2], [w1, w2]: [Vec2, Vec2]): Vec2 
 // =============== old ==============
 
 export function minus(v: Vec2, w: Vec2): Vec2 {
-  return unembed(apply(
-    translate([-w[0], -w[1]]),
-    embed(v),
-  ));
+  return [v[0] - w[0], v[1] - w[1]];
 }
 
 export function plus(v: Vec2, w: Vec2): Vec2 {
-  return unembed(apply(
-    translate(w),
-    embed(v),
-  ));
+  return [v[0] + w[0], v[1] + w[1]];
 }
 
 function multiply(v: Vec2, coeff: number): Vec2 {
-  return unembed(apply(
-    scale(coeff),
-    embed(v),
-  ));
+  return [v[0] * coeff, v[1] * coeff];
 }
 
 function cross(v: Vec2, w: Vec2): number {
