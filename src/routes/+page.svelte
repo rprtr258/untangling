@@ -1,7 +1,12 @@
 <script lang="ts">
   import {onMount} from "svelte";
-  import {minus, plus, multiply, cross, distSq} from "./Vec2";
-  import type {Vec2} from "./Vec2";
+  import {
+    minus, distSq,
+    scaleXY, translate, scale,
+    unembed, apply, embed, compose, invert, intersect, poop as apply2, minmax, eye,
+  } from "./math";
+  import type {Vec2, Mat3} from "./math";
+  import {filterMap, generate, shuffle} from "./list";
 
   const graphicsConfig = {
     vertexRadius: 10,
@@ -11,26 +16,28 @@
     intersectionColor: "#cc0000",
     heldEdgeColor: "#505060",
     notHeldEdgeColor: "#000000",
-    textColor: "white",
+    textColor: "#ffffff",
     backgroundColor: "#2e3436",
   };
 
-  let screenSize: Vec2 = {x: 1200, y: 700};
+  let screenSize: Vec2 = [1200, 700];
   let mouseState:
     {type: "up"} // button is up
     | {type: "vertex", index: number} // holding vertex by that index
     | {type: "select", begin: Vec2, end: Vec2} // group selection
-    | {type: "camera"}
-    = {type: "up"}; // moving camera by such vector
+    | {type: "camera"} // moving camera by such vector
+    = {type: "up"};
 
-  let camera: {
-    zoom: number,
+  type Camera = {
+    zoom: Mat3,
     // camera position in screen coords
-    shift: Vec2,
-  } = {
-    zoom: 0,
-    shift: {x: 0, y: 0},
-  }
+    shift: Mat3,
+  };
+  let camera: Camera = {
+    zoom: scale(1),
+    shift: eye,
+    //shift: [screenSize.width / 2, screenSize.height / 2],
+  };
 
   let g: {
     // coords in [0, 1] x [0, 1]
@@ -45,70 +52,27 @@
   };
   let selectedVertices: number[] = [];
 
-  const EPS = 1e-6;
-  function intersect(v1: Vec2, v2: Vec2, w1: Vec2, w2: Vec2): Vec2 | null {
-    const w = minus(w2, w1);
-    const v = minus(v2, v1);
-    const m = minus(v1, w1);
-    const delta = cross(v, w);
-    if (delta == 0) { // collinear
-      return null;
-    }
-    const deltaA = cross(v, m) / delta;
-    const deltaB = cross(w, m) / delta;
-    if (deltaB <= EPS || deltaB >= 1-EPS || deltaA <= EPS || deltaA >= 1-EPS) {
-      return null;
-    }
-    return plus(v1, multiply(v, deltaB));
-  }
-
   function generateVertices(n: number) {
-    let vertices: Vec2[] = [];
-    for (let i = 0; i < n; i++) {
-      vertices.push({x: Math.random(), y: Math.random()})
-    }
-    return vertices;
-  }
-
-  function shuffle<T>(list: T[]): T[] {
-    for (let i = list.length - 1; i > 0; i--) {
-      let j = Math.floor(Math.random() * (i + 1));
-      let temp = list[i];
-      list[i] = list[j];
-      list[j] = temp;
-    }
-    return list
+    return generate(n, (): Vec2 => [Math.random(), Math.random()]);
   }
 
   function generateGraph(n: number) {
     const vertices = generateVertices(n);
-    let allEdges: {
-      from: number,
-      to: number,
-    }[] = [];
-    for (let i = 0; i < vertices.length; i++) {
-      for (let j = 0; j < i; j++) {
-        allEdges.push({from: i, to: j});
-      }
-    }
-    allEdges = shuffle(allEdges);
+    const allEdges = shuffle(generate(
+      vertices.length,
+      i => generate(
+        i,
+        j => {return {from: i, to: j}},
+      ),
+    ).flat());
     let edges2: typeof allEdges = [];
-    for (let edge of allEdges) {
-      let addsIntersection = false;
-      for (let bedge of edges2) {
-        if (intersect(
-          vertices[edge.from],
-          vertices[edge.to],
-          vertices[bedge.from],
-          vertices[bedge.to],
-        ) !== null) {
-          addsIntersection = true;
-          break;
-        }
-      }
+    for (let edge1 of allEdges) {
       // TODO: fix filtering too much edges
-      if (!addsIntersection) {
-        edges2.push(edge);
+      if (edges2.every((edge2) => intersect(
+        [vertices[edge1.from], vertices[edge1.to]],
+        [vertices[edge2.from], vertices[edge2.to]],
+      ) === null)) {
+        edges2.push(edge1);
       }
     }
     return {
@@ -118,60 +82,53 @@
   }
 
   function onMouseMove(e: MouseEvent) {
-    const mouseFinPt: Vec2 = {x: e.clientX, y: e.clientY};
-    const halfPt = multiply(screenSize, 1/2);
-    const mouseAbsPt: Vec2 = plus(multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff), halfPt);
-    const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
-    const mouseNormPt: Vec2 = {
-      x: mouseScreenPt.x / screenSize.x,
-      y: mouseScreenPt.y / screenSize.y,
-    };
+    const mouseFinPt: Vec2 = [e.clientX, e.clientY];
+    const mouseNormPt = unembed(apply(
+      invert(normToFin(camera)),
+      embed(mouseFinPt),
+    ));
     switch (mouseState.type) {
     case "vertex":
       if (!selectedVertices.includes(mouseState.index)) {
         g.vertices[mouseState.index] = mouseNormPt;
       } else {
-        const move = minus(mouseNormPt, g.vertices[mouseState.index]);
+        const diff = minus(mouseNormPt, g.vertices[mouseState.index]);
+        const move = translate(diff);
         for (const vertexIdx of selectedVertices) {
-          g.vertices[vertexIdx] = plus(g.vertices[vertexIdx], move);
+          g.vertices[vertexIdx] = apply2(move, g.vertices[vertexIdx]);
         }
       }
       break;
     case "camera":
-      let moveFinPt: Vec2 = {x: e.movementX, y: e.movementY};
-      const moveAbsPt: Vec2 = multiply(moveFinPt, 1/zoomCoeff);
-      camera.shift = plus(camera.shift, moveAbsPt);
+      let moveFinPt: Vec2 = [e.movementX, e.movementY];
+      const moveAbsPt: Vec2 = unembed(apply(
+        invert(camera.zoom),
+        embed(moveFinPt),
+      ));
+      camera.shift = compose(
+        translate(moveAbsPt),
+        camera.shift,
+      );
       break;
     case "select":
-      mouseState.end = mouseNormPt;
-      mouseState = mouseState;
-      selectedVertices = ((): number[] => {
-        if (mouseState.type !== "select") {
-          return [];
-        }
-
-        const minX = Math.min(mouseState.begin.x, mouseState.end.x);
-        const maxX = Math.max(mouseState.begin.x, mouseState.end.x);
-        const minY = Math.min(mouseState.begin.y, mouseState.end.y);
-        const maxY = Math.max(mouseState.begin.y, mouseState.end.y);
-
-        let res = [];
-        for (let i = 0; i < g.vertices.length; i++) {
-          const v = g.vertices[i];
-          if (v.x < minX || v.x > maxX || v.y < minY || v.y > maxY) {
-            continue;
-          }
-          res.push(i);
-        }
-        return res;
-      })();
+      mouseState = {...mouseState, end: mouseNormPt};
+      const [minX, maxX] = minmax(mouseState.begin[0], mouseState.end[0]);
+      const [minY, maxY] = minmax(mouseState.begin[1], mouseState.end[1]);
+      selectedVertices = filterMap(
+        g.vertices,
+        (v, i) => [
+          i,
+          v[0] >= minX && v[0] <= maxX &&
+          v[1] >= minY && v[1] <= maxY,
+        ],
+      );
       break;
     }
   }
 
   function onMouseDown(e: MouseEvent) {
     e.preventDefault();
-    const mousePos: Vec2 = {x: e.clientX, y: e.clientY};
+    const mousePos: Vec2 = [e.clientX, e.clientY];
     if (e.button == 0) { // LMB
       for (let i = 0; i < g.vertices.length; i++) {
         const vertex = realVertices[i];
@@ -184,13 +141,10 @@
       }
       mouseState = {type: "camera"};
     } else if (e.button == 2) { // RMB
-      const halfPt = multiply(screenSize, 1/2);
-      const mouseAbsPt: Vec2 = plus(multiply(minus(mousePos, halfPt), 1/zoomCoeff), halfPt);
-      const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
-      const mouseNormPt: Vec2 = {
-        x: mouseScreenPt.x / screenSize.x,
-        y: mouseScreenPt.y / screenSize.y,
-      };
+      const mouseNormPt = unembed(apply(
+        invert(normToFin(camera)),
+        embed(mousePos),
+      ));
       mouseState = {
         type: "select",
         begin: mouseNormPt,
@@ -203,22 +157,28 @@
     currentTarget: EventTarget & SVGSVGElement,
   }) {
     e.preventDefault();
-    camera.zoom -= e.deltaY;
+    camera.zoom = compose(
+      scale(Math.exp(-e.deltaY / 1000)),
+      camera.zoom,
+    );
   }
 
   function onMouseUp(_: MouseEvent) {
     mouseState = {type: "up"};
   }
 
-  function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
-    const screenPt = {
-      x: pt.x * screenSize.x,
-      y: pt.y * screenSize.y,
-    };
-    const absPt = plus(screenPt, cameraPt);
-    const halfPt = multiply(screenSize, 1/2);
-    const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
-    return finPt;
+  function normToFin(camera: Camera): Mat3 {
+    const halfPtTranslate = translate([
+      screenSize[0] / 2,
+      screenSize[1] / 2,
+    ]);
+    return compose(
+      scaleXY(screenSize),
+      camera.shift,
+      invert(halfPtTranslate),
+      camera.zoom,
+      halfPtTranslate,
+    );
   }
 
   $: realSelect = (() => {
@@ -226,30 +186,27 @@
       return null;
     }
 
+    const m = normToFin(camera);
     return {
-      begin: normToFin(mouseState.begin, camera.shift, zoomCoeff),
-      end: normToFin(mouseState.end, camera.shift, zoomCoeff),
+      begin: apply2(m, mouseState.begin),
+      end:   apply2(m, mouseState.end),
     };
   })();
 
-  $: zoomCoeff = Math.exp(camera.zoom / 1000);
-
-  $: realVertices = g.vertices.map((v) => {
-    return normToFin(v, camera.shift, zoomCoeff);
-  });
+  $: realVertices = (() => {
+    const transform = normToFin(camera);
+    return g.vertices.map((v) => apply2(transform, v));
+  })();
 
   $: intersections = (() => {
     let newIntersections = [];
     for (let i = 0; i < g.edges.length; i++) {
       for (let j = 0; j < i; j++) {
-        if (i == j) continue;
         const edge1 = g.edges[i];
         const edge2 = g.edges[j];
         const intersection = intersect(
-          realVertices[edge1.from],
-          realVertices[edge1.to],
-          realVertices[edge2.from],
-          realVertices[edge2.to],
+          [realVertices[edge1.from], realVertices[edge1.to]],
+          [realVertices[edge2.from], realVertices[edge2.to]],
         );
         if (intersection === null) {
           continue;
@@ -265,13 +222,17 @@
   })();
 
   onMount(() => {
-    g = generateGraph(30);
+    g = generateGraph(10);
+    // camera = {
+    //   zoom: 0,
+    //   shift: [screenSize.width / 2, screenSize.height / 2],
+    // };
   });
 </script>
 
 <div
-  bind:clientWidth={screenSize.x}
-  bind:clientHeight={screenSize.y}
+  bind:clientWidth={screenSize[0]}
+  bind:clientHeight={screenSize[1]}
   on:mousemove={onMouseMove}
   on:mousedown={onMouseDown}
   on:mouseup={onMouseUp}
@@ -292,37 +253,37 @@
         fill="none"
         stroke="black"
         stroke-width={graphicsConfig.edgeWidth}
-        points={`${realVertices[from].x},${realVertices[from].y} ${realVertices[to].x},${realVertices[to].y}`}
+        points={`${realVertices[from][0]},${realVertices[from][1]} ${realVertices[to][0]},${realVertices[to][1]}`}
       />
     {/each}
-    {#each realVertices as {x, y}, i}
+    {#each realVertices as v, i}
       <circle
         r={graphicsConfig.vertexRadius}
         fill={selectedVertices.includes(i) ? "#fa5b56" : graphicsConfig.vertexColor}
-        transform={`translate(${x},${y})`}
+        transform={`translate(${v[0]},${v[1]})`}
       />
     {/each}
     {#each intersections as {pt}}
     	<circle
         r={graphicsConfig.intersectionRadius}
         fill={graphicsConfig.intersectionColor}
-        transform={`translate(${pt.x},${pt.y})`}
+        transform={`translate(${pt[0]},${pt[1]})`}
       />
     {/each}
     {#if realSelect !== null}
       <rect
         id="select"
-        width="{Math.abs(realSelect.end.x-realSelect.begin.x)}px"
-        height="{Math.abs(realSelect.end.y-realSelect.begin.y)}px"
-        x={Math.min(realSelect.begin.x, realSelect.end.x)}
-        y={Math.min(realSelect.begin.y, realSelect.end.y)}
+        width="{Math.abs(realSelect.end[0]-realSelect.begin[0])}px"
+        height="{Math.abs(realSelect.end[1]-realSelect.begin[1])}px"
+        x={Math.min(realSelect.begin[0], realSelect.end[0])}
+        y={Math.min(realSelect.begin[1], realSelect.end[1])}
       />
     {/if}
     <text
       fill="white"
       dominant-baseline="central"
       text-anchor="middle"
-      transform={`translate(${screenSize.x/2}, ${20})`}
+      transform={`translate(${screenSize[0]/2}, ${20})`}
     >
       {#if intersections.length === 0}
         vahui
