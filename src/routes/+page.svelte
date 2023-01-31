@@ -129,7 +129,7 @@
     case "camera":
       let moveFinPt: Vec2 = [e.movementX, e.movementY];
       const moveAbsPt: Vec2 = unembed(apply(
-        scale(1/zoomCoeff),
+        invert(scale(zoomCoeff)),
         embed(moveFinPt),
       ));
       camera.shift = unembed(apply(
