@@ -12,6 +12,10 @@ export function embed(v: Vec2): Vec3 {
   return [v[0], v[1], 1];
 }
 
+export function unembed(v: Vec3): Vec2 {
+  return [x(v), y(v)];
+}
+
 export function x(v: Vec3): number {
   return v[0] / v[2];
 }
@@ -55,15 +59,17 @@ export function translate(v: Vec2): Mat3 {
 // =============== old ==============
 
 export function minus(v: Vec2, w: Vec2): Vec2 {
-  return [v[0] - w[0], v[1] - w[1]];
+  return unembed(apply(
+    translate([-w[0], -w[1]]),
+    embed(v),
+  ));
 }
 
 export function plus(v: Vec2, w: Vec2): Vec2 {
-  const u = apply(
+  return unembed(apply(
     translate(w),
     embed(v),
-  );
-  return [u[0], u[1]];
+  ));
 }
 
 export function multiply(v: Vec2, c: number): Vec2 {
