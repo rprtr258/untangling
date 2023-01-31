@@ -70,18 +70,11 @@
     allEdges = shuffle(allEdges);
     let edges2: typeof allEdges = [];
     for (let edge1 of allEdges) {
-      let addsIntersection = false;
-      for (let edge2 of edges2) {
-        if (intersect(
-          [vertices[edge1.from], vertices[edge1.to]],
-          [vertices[edge2.from], vertices[edge2.to]],
-        ) !== null) {
-          addsIntersection = true;
-          break;
-        }
-      }
       // TODO: fix filtering too much edges
-      if (!addsIntersection) {
+      if (edges2.every((edge2) => intersect(
+        [vertices[edge1.from], vertices[edge1.to]],
+        [vertices[edge2.from], vertices[edge2.to]],
+      ) === null)) {
         edges2.push(edge1);
       }
     }
