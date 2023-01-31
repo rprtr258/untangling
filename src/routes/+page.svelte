@@ -184,13 +184,7 @@
         screenSize[1] / 2,
       ]);
       const mouseNormPt = unembed(apply(
-        compose(
-          invert(halfPtTranslate),
-          invert(scale(zoomCoeff)),
-          halfPtTranslate,
-          invert(translate(camera.shift)),
-          invert(scaleXY(screenSize)),
-        ),
+        invert(normToFin(camera.shift, zoomCoeff)),
         embed(mousePos),
       ));
       mouseState = {
