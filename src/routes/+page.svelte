@@ -186,10 +186,10 @@
       const mouseNormPt = unembed(apply(
         compose(
           invert(halfPtTranslate),
-          scale(1/zoomCoeff),
+          invert(scale(zoomCoeff)),
           halfPtTranslate,
           invert(translate(camera.shift)),
-          scaleXY([1/screenSize[0], 1/screenSize[1]]),
+          invert(scaleXY(screenSize)),
         ),
         embed(mousePos),
       ));
