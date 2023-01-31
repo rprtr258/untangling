@@ -52,8 +52,28 @@ export function translate(v: Vec2): Mat3 {
   return [
     [1, 0, v[0]],
     [0, 1, v[1]],
-    [0, 0, 1],
+    [0, 0,    1],
   ];
+}
+
+export function scaleXY(v: Vec2): Mat3 {
+  return [
+    [v[0],    0, 0],
+    [   0, v[1], 0],
+    [   0,    0, 1],
+  ];
+}
+
+export function scaleX(coeff: number): Mat3 {
+  return scaleXY([coeff, 1]);
+}
+
+export function scaleY(coeff: number): Mat3 {
+  return scaleXY([1, coeff]);
+}
+
+export function scale(coeff: number): Mat3 {
+  return scaleXY([coeff, coeff]);
 }
 
 // =============== old ==============
@@ -72,8 +92,11 @@ export function plus(v: Vec2, w: Vec2): Vec2 {
   ));
 }
 
-export function multiply(v: Vec2, c: number): Vec2 {
-  return [v[0] * c, v[1] * c];
+export function multiply(v: Vec2, coeff: number): Vec2 {
+  return unembed(apply(
+    scale(coeff),
+    embed(v),
+  ));
 }
 
 export function cross(v: Vec2, w: Vec2): number {
