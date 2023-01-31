@@ -1,6 +1,10 @@
 <script lang="ts">
   import {onMount} from "svelte";
-  import {minus, plus, multiply, cross, distSq, scaleXY, unembed, apply, embed, translate, compose, scale, invert, intersect} from "./math";
+  import {
+    minus, plus, distSq,
+    scaleXY, translate, scale,
+    unembed, apply, embed, compose, invert, intersect, poop,
+  } from "./math";
   import type {Vec2, Vec3, Mat3} from "./math";
 
   const graphicsConfig = {
@@ -209,21 +213,18 @@
     mouseState = {type: "up"};
   }
 
-  function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
+  function normToFin(cameraPt: Vec2, zoomCoeff: number): Mat3 {
     const halfPtTranslate = translate([
       screenSize[0] / 2,
       screenSize[1] / 2,
     ]);
-    return unembed(apply(
-      compose(
-        scaleXY(screenSize),
-        translate(cameraPt),
-        invert(halfPtTranslate),
-        scale(zoomCoeff),
-        halfPtTranslate,
-      ),
-      embed(pt),
-    ));
+    return compose(
+      scaleXY(screenSize),
+      translate(cameraPt),
+      invert(halfPtTranslate),
+      scale(zoomCoeff),
+      halfPtTranslate,
+    );
   }
 
   $: realSelect = (() => {
@@ -231,17 +232,21 @@
       return null;
     }
 
+    const m = normToFin(camera.shift, zoomCoeff);
     return {
-      begin: normToFin(mouseState.begin, camera.shift, zoomCoeff),
-      end: normToFin(mouseState.end, camera.shift, zoomCoeff),
+      begin: poop(m, mouseState.begin),
+      end:   poop(m, mouseState.end),
     };
   })();
 
   $: zoomCoeff = Math.exp(camera.zoom / 1000);
 
-  $: realVertices = g.vertices.map((v) => {
-    return normToFin(v, camera.shift, zoomCoeff);
-  });
+  $: realVertices = (() => {
+    const transform = normToFin(camera.shift, zoomCoeff);
+    return g.vertices.map((v) => {
+      return poop(transform, v);
+    });
+  })();
 
   $: intersections = (() => {
     let newIntersections = [];

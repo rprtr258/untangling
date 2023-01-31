@@ -48,6 +48,10 @@ export function compose(...ms: Mat3[]): Mat3 {
   return res as Mat3;
 }
 
+export function poop(m: Mat3, v: Vec2): Vec2 {
+  return unembed(apply(m, embed(v)));
+}
+
 export function apply(m: Mat3, v: Vec3): Vec3 {
   return [
     m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
@@ -57,16 +61,13 @@ export function apply(m: Mat3, v: Vec3): Vec3 {
 }
 
 export function invert(m: Mat3): Mat3 {
-  const a = m[0][0];
-  const b = m[0][1];
-  const c = m[0][2];
-  const d = m[1][0];
-  const e = m[1][1];
-  const f = m[1][2];
-  const g = m[2][0];
-  const h = m[2][1];
-  const i = m[2][2];
-  const invDet = 1 / (a*(e*i - f*h) - b*(d*i - f*g) + c*(d*h - e*g));
+  const [
+    [a, b, c],
+    [d, e, f],
+    [g, h, i],
+  ] = m;
+  const det = a*(e*i - f*h) - b*(d*i - f*g) + c*(d*h - e*g);
+  const invDet = 1/det;
   return compose([
     [e*i - f*h, c*h - b*i, b*f - c*e],
     [f*g - d*i, a*i - c*g, c*d - a*f],
@@ -140,14 +141,14 @@ export function plus(v: Vec2, w: Vec2): Vec2 {
   ));
 }
 
-export function multiply(v: Vec2, coeff: number): Vec2 {
+function multiply(v: Vec2, coeff: number): Vec2 {
   return unembed(apply(
     scale(coeff),
     embed(v),
   ));
 }
 
-export function cross(v: Vec2, w: Vec2): number {
+function cross(v: Vec2, w: Vec2): number {
   return v[0] * w[1] - v[1] * w[0];
 }
 
