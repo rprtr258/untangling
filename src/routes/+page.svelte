@@ -192,19 +192,16 @@
         screenSize[0] / 2,
         screenSize[1] / 2,
       ]);
-      const mouseAbsPt = unembed(apply(
+      const mouseNormPt = unembed(apply(
         compose(
           invert(halfPtTranslate),
           scale(1/zoomCoeff),
           halfPtTranslate,
+          invert(translate(camera.shift)),
+          scaleXY([1/screenSize[0], 1/screenSize[1]]),
         ),
         embed(mousePos),
       ));
-      const mouseScreenPt = minus(mouseAbsPt, camera.shift);
-      const mouseNormPt: Vec2 = [
-        mouseScreenPt[0] / screenSize[0],
-        mouseScreenPt[1] / screenSize[1],
-      ];
       mouseState = {
         type: "select",
         begin: mouseNormPt,
