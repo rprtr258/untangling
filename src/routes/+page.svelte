@@ -5,7 +5,8 @@
     scaleXY, translate, scale,
     unembed, apply, embed, compose, invert, intersect, poop, minmax, eye,
   } from "./math";
-  import type {Vec2, Vec3, Mat3} from "./math";
+  import type {Vec2, Mat3} from "./math";
+  import {shuffle} from "./list";
 
   const graphicsConfig = {
     vertexRadius: 10,
@@ -59,14 +60,6 @@
     return vertices;
   }
 
-  function shuffle<T>(list: T[]): T[] {
-    for (let i = list.length - 1; i > 0; i--) {
-      let j = Math.floor(Math.random() * (i + 1));
-      [list[i], list[j]] = [list[j], list[i]];
-    }
-    return list
-  }
-
   function generateGraph(n: number) {
     const vertices = generateVertices(n);
     let allEdges: {
@@ -104,7 +97,6 @@
 
   function onMouseMove(e: MouseEvent) {
     const mouseFinPt: Vec2 = [e.clientX, e.clientY];
-    const halfPtTranslate = translate([screenSize[0]/2, screenSize[1]/2]);
     const mouseNormPt = unembed(apply(
       invert(normToFin(camera)),
       embed(mouseFinPt),
@@ -168,10 +160,6 @@
       }
       mouseState = {type: "camera"};
     } else if (e.button == 2) { // RMB
-      const halfPtTranslate = translate([
-        screenSize[0] / 2,
-        screenSize[1] / 2,
-      ]);
       const mouseNormPt = unembed(apply(
         invert(normToFin(camera)),
         embed(mousePos),
