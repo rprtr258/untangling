@@ -188,12 +188,19 @@
       }
       mouseState = {type: "camera"};
     } else if (e.button == 2) { // RMB
-      const halfPt = multiply(screenSize, 1/2);
-      const mouseAbsPt: Vec2 = plus(
-        multiply(minus(mousePos, halfPt), 1/zoomCoeff),
-        halfPt,
-      );
-      const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
+      const halfPtTranslate = translate([
+        screenSize[0] / 2,
+        screenSize[1] / 2,
+      ]);
+      const mouseAbsPt = unembed(apply(
+        compose(
+          invert(halfPtTranslate),
+          scale(1/zoomCoeff),
+          halfPtTranslate,
+        ),
+        embed(mousePos),
+      ));
+      const mouseScreenPt = minus(mouseAbsPt, camera.shift);
       const mouseNormPt: Vec2 = [
         mouseScreenPt[0] / screenSize[0],
         mouseScreenPt[1] / screenSize[1],
