@@ -218,7 +218,7 @@
   }
 
   function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
-    const screenPt: Vec2 = unembed(apply(scaleXY(screenSize), embed(pt)));
+    const screenPt = unembed(apply(scaleXY(screenSize), embed(pt)));
     const absPt = plus(screenPt, cameraPt);
     const halfPt = multiply(screenSize, 1/2);
     const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
