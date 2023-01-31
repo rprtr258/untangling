@@ -6,7 +6,7 @@
     unembed, apply, embed, compose, invert, intersect, poop, minmax, eye,
   } from "./math";
   import type {Vec2, Mat3} from "./math";
-  import {shuffle} from "./list";
+  import {filterMap, generate, shuffle} from "./list";
 
   const graphicsConfig = {
     vertexRadius: 10,
@@ -53,11 +53,7 @@
   let selectedVertices: number[] = [];
 
   function generateVertices(n: number) {
-    let vertices: Vec2[] = [];
-    for (let i = 0; i < n; i++) {
-      vertices.push([Math.random(), Math.random()]);
-    }
-    return vertices;
+    return generate(n, (): Vec2 => [Math.random(), Math.random()]);
   }
 
   function generateGraph(n: number) {
@@ -130,7 +126,6 @@
       selectedVertices = ((): number[] => {
         const [minX, maxX] = minmax(mouseState.begin[0], mouseState.end[0]);
         const [minY, maxY] = minmax(mouseState.begin[1], mouseState.end[1]);
-
         let res = [];
         for (let i = 0; i < g.vertices.length; i++) {
           const v = g.vertices[i];
@@ -140,6 +135,14 @@
           res.push(i);
         }
         return res;
+        // return filterMap(
+        //   g.vertices,
+        //   (v, i) => [
+        //     i,
+        //     v[0] >= minX && v[0] <= maxX &&
+        //     v[1] >= minY && v[1] <= maxY,
+        //   ],
+        // );
       })();
       break;
     }
