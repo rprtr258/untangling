@@ -120,16 +120,17 @@
 
   function onMouseMove(e: MouseEvent) {
     const mouseFinPt: Vec2 = [e.clientX, e.clientY];
-    const halfPt = multiply(screenSize, 1/2);
-    const mouseAbsPt: Vec2 = plus(
-      multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff),
-      halfPt,
-    );
-    const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
-    const mouseNormPt: Vec2 = [
-      mouseScreenPt[0] / screenSize[0],
-      mouseScreenPt[1] / screenSize[1],
-    ];
+    const halfPtTranslate = translate([screenSize[0]/2, screenSize[1]/2]);
+    const mouseNormPt = unembed(apply(
+      compose(
+        invert(halfPtTranslate),
+        scale(1/zoomCoeff),
+        halfPtTranslate,
+        invert(translate(camera.shift)),
+        invert(scaleXY(screenSize)),
+      ),
+      embed(mouseFinPt),
+    ));
     switch (mouseState.type) {
     case "vertex":
       if (!selectedVertices.includes(mouseState.index)) {
@@ -142,12 +143,13 @@
       }
       break;
     case "camera":
-      let moveFinPt = embed([e.movementX, e.movementY]);
+      let moveFinPt: Vec2 = [e.movementX, e.movementY];
+      const moveAbsPt: Vec2 = unembed(apply(
+        scale(1/zoomCoeff),
+        embed(moveFinPt),
+      ));
       camera.shift = unembed(apply(
-        translate(unembed(apply(
-          scale(1/zoomCoeff),
-          moveFinPt,
-        ))),
+        translate(moveAbsPt),
         embed(camera.shift),
       ));
       break;
