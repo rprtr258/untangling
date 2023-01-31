@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount} from "svelte";
-  import {minus, plus, multiply, cross, distSq, scaleXY, unembed, apply, embed} from "./math";
+  import {minus, plus, multiply, cross, distSq, scaleXY, unembed, apply, embed, translate} from "./math";
   import type {Vec2, Vec3, Mat3} from "./math";
 
   const graphicsConfig = {
@@ -219,7 +219,10 @@
 
   function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
     const screenPt = unembed(apply(scaleXY(screenSize), embed(pt)));
-    const absPt = plus(screenPt, cameraPt);
+    const absPt = unembed(apply(
+      translate(cameraPt),
+      embed(screenPt),
+    ));
     const halfPt = multiply(screenSize, 1/2);
     const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
     return finPt;
