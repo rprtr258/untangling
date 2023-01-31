@@ -3,7 +3,7 @@
   import {
     minus, distSq,
     scaleXY, translate, scale,
-    unembed, apply, embed, compose, invert, intersect, poop, minmax, eye,
+    unembed, apply, embed, compose, invert, intersect, poop as apply2, minmax, eye,
   } from "./math";
   import type {Vec2, Mat3} from "./math";
   import {filterMap, generate, shuffle} from "./list";
@@ -105,7 +105,7 @@
         const diff = minus(mouseNormPt, g.vertices[mouseState.index]);
         const move = translate(diff);
         for (const vertexIdx of selectedVertices) {
-          g.vertices[vertexIdx] = poop(move, g.vertices[vertexIdx]);
+          g.vertices[vertexIdx] = apply2(move, g.vertices[vertexIdx]);
         }
       }
       break;
@@ -198,14 +198,14 @@
 
     const m = normToFin(camera);
     return {
-      begin: poop(m, mouseState.begin),
-      end:   poop(m, mouseState.end),
+      begin: apply2(m, mouseState.begin),
+      end:   apply2(m, mouseState.end),
     };
   })();
 
   $: realVertices = (() => {
     const transform = normToFin(camera);
-    return g.vertices.map((v) => poop(transform, v));
+    return g.vertices.map((v) => apply2(transform, v));
   })();
 
   $: intersections = (() => {
