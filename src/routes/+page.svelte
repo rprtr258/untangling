@@ -27,11 +27,12 @@
     | {type: "camera"} // moving camera by such vector
     = {type: "up"};
 
-  let camera: {
+  type Camera = {
     zoom: number,
     // camera position in screen coords
     shift: Mat3,
-  } = {
+  };
+  let camera: Camera = {
     zoom: 1,
     shift: eye,
     //shift: [screenSize.width / 2, screenSize.height / 2],
@@ -105,7 +106,7 @@
     const mouseFinPt: Vec2 = [e.clientX, e.clientY];
     const halfPtTranslate = translate([screenSize[0]/2, screenSize[1]/2]);
     const mouseNormPt = unembed(apply(
-      invert(normToFin(camera.shift, camera.zoom)),
+      invert(normToFin(camera)),
       embed(mouseFinPt),
     ));
     switch (mouseState.type) {
@@ -172,7 +173,7 @@
         screenSize[1] / 2,
       ]);
       const mouseNormPt = unembed(apply(
-        invert(normToFin(camera.shift, camera.zoom)),
+        invert(normToFin(camera)),
         embed(mousePos),
       ));
       mouseState = {
@@ -194,16 +195,16 @@
     mouseState = {type: "up"};
   }
 
-  function normToFin(cameraShift: Mat3, zoomCoeff: number): Mat3 {
+  function normToFin(camera: Camera): Mat3 {
     const halfPtTranslate = translate([
       screenSize[0] / 2,
       screenSize[1] / 2,
     ]);
     return compose(
       scaleXY(screenSize),
-      cameraShift,
+      camera.shift,
       invert(halfPtTranslate),
-      scale(zoomCoeff),
+      scale(camera.zoom),
       halfPtTranslate,
     );
   }
@@ -213,7 +214,7 @@
       return null;
     }
 
-    const m = normToFin(camera.shift, camera.zoom);
+    const m = normToFin(camera);
     return {
       begin: poop(m, mouseState.begin),
       end:   poop(m, mouseState.end),
@@ -221,7 +222,7 @@
   })();
 
   $: realVertices = (() => {
-    const transform = normToFin(camera.shift, camera.zoom);
+    const transform = normToFin(camera);
     return g.vertices.map((v) => {
       return poop(transform, v);
     });
