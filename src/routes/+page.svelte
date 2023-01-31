@@ -141,10 +141,6 @@
       mouseState.end = mouseNormPt;
       mouseState = mouseState;
       selectedVertices = ((): number[] => {
-        if (mouseState.type !== "select") {
-          return [];
-        }
-
         const [minX, maxX] = minmax(mouseState.begin[0], mouseState.end[0]);
         const [minY, maxY] = minmax(mouseState.begin[1], mouseState.end[1]);
 
