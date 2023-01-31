@@ -61,9 +61,7 @@
   function shuffle<T>(list: T[]): T[] {
     for (let i = list.length - 1; i > 0; i--) {
       let j = Math.floor(Math.random() * (i + 1));
-      let temp = list[i];
-      list[i] = list[j];
-      list[j] = temp;
+      [list[i], list[j]] = [list[j], list[i]];
     }
     return list
   }
