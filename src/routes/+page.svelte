@@ -218,28 +218,20 @@
   }
 
   function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
-    const absPt = unembed(apply(
+    const halfPtTranslate = translate([
+      screenSize[0] / 2,
+      screenSize[1] / 2,
+    ]);
+    return unembed(apply(
       compose(
         scaleXY(screenSize),
         translate(cameraPt),
-      ),
-      embed(pt),
-    ));
-    const halfPt = unembed(apply(
-      scale(1/2),
-      embed(screenSize),
-    ));
-    const halfPtTranslate = translate(halfPt);
-    const finPt = unembed(apply(
-      compose(
         invert(halfPtTranslate),
         scale(zoomCoeff),
         halfPtTranslate,
       ),
-      embed(absPt),
+      embed(pt),
     ));
-    // const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
-    return finPt;
   }
 
   $: realSelect = (() => {
