@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount} from "svelte";
-  import {minus, plus, multiply, cross, distSq, scaleXY, unembed, apply, embed, translate, compose} from "./math";
+  import {minus, plus, multiply, cross, distSq, scaleXY, unembed, apply, embed, translate, compose, scale, invert} from "./math";
   import type {Vec2, Vec3, Mat3} from "./math";
 
   const graphicsConfig = {
@@ -225,8 +225,22 @@
       ),
       embed(pt),
     ));
-    const halfPt = multiply(screenSize, 1/2);
-    const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
+    const halfPt = unembed(apply(
+      scale(1/2),
+      embed(screenSize),
+    ));
+    const halfPtTranslate = translate(halfPt);
+    const finPt = unembed(apply(
+      compose(
+        invert(halfPtTranslate),
+        compose(
+          scale(zoomCoeff),
+          halfPtTranslate,
+        ),
+      ),
+      embed(absPt),
+    ));
+    // const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
     return finPt;
   }
 
