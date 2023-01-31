@@ -152,7 +152,7 @@ function cross(v: Vec2, w: Vec2): number {
   return v[0] * w[1] - v[1] * w[0];
 }
 
-export function dot(v: Vec2, w: Vec2): number {
+function dot(v: Vec2, w: Vec2): number {
   return v[0] * w[0] + v[1] * w[1];
 }
 
