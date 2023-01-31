@@ -24,18 +24,26 @@ export function y(v: Vec3): number {
   return v[1] / v[2];
 }
 
-export function compose(first: Mat3, second: Mat3): Mat3 {
+export function compose(...ms: Mat3[]): Mat3 {
   let res = [
-    [0, 0, 0],
-    [0, 0, 0],
-    [0, 0, 0],
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
   ];
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      for (let k = 0; k < 3; k++) {
-        res[i][j] += second[i][k] * first[k][j];
+  for (let m of ms) {
+    let newRes = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0],
+    ];
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        for (let k = 0; k < 3; k++) {
+          newRes[i][j] += m[i][k] * res[k][j];
+        }
       }
     }
+    res = newRes;
   }
   return res as Mat3;
 }

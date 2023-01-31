@@ -233,10 +233,8 @@
     const finPt = unembed(apply(
       compose(
         invert(halfPtTranslate),
-        compose(
-          scale(zoomCoeff),
-          halfPtTranslate,
-        ),
+        scale(zoomCoeff),
+        halfPtTranslate,
       ),
       embed(absPt),
     ));
