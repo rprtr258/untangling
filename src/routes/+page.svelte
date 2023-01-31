@@ -32,7 +32,7 @@
     // camera position in screen coords
     shift: Mat3,
   } = {
-    zoom: 0,
+    zoom: 1,
     shift: eye,
     //shift: [screenSize.width / 2, screenSize.height / 2],
   };
@@ -105,13 +105,7 @@
     const mouseFinPt: Vec2 = [e.clientX, e.clientY];
     const halfPtTranslate = translate([screenSize[0]/2, screenSize[1]/2]);
     const mouseNormPt = unembed(apply(
-      compose(
-        invert(halfPtTranslate),
-        scale(1/zoomCoeff),
-        halfPtTranslate,
-        invert(camera.shift),
-        invert(scaleXY(screenSize)),
-      ),
+      invert(normToFin(camera.shift, camera.zoom)),
       embed(mouseFinPt),
     ));
     switch (mouseState.type) {
@@ -129,7 +123,7 @@
     case "camera":
       let moveFinPt: Vec2 = [e.movementX, e.movementY];
       const moveAbsPt: Vec2 = unembed(apply(
-        invert(scale(zoomCoeff)),
+        invert(scale(camera.zoom)),
         embed(moveFinPt),
       ));
       camera.shift = compose(
@@ -178,7 +172,7 @@
         screenSize[1] / 2,
       ]);
       const mouseNormPt = unembed(apply(
-        invert(normToFin(camera.shift, zoomCoeff)),
+        invert(normToFin(camera.shift, camera.zoom)),
         embed(mousePos),
       ));
       mouseState = {
@@ -193,7 +187,7 @@
     currentTarget: EventTarget & SVGSVGElement,
   }) {
     e.preventDefault();
-    camera.zoom -= e.deltaY;
+    camera.zoom /= Math.exp(e.deltaY / 1000);
   }
 
   function onMouseUp(_: MouseEvent) {
@@ -219,17 +213,15 @@
       return null;
     }
 
-    const m = normToFin(camera.shift, zoomCoeff);
+    const m = normToFin(camera.shift, camera.zoom);
     return {
       begin: poop(m, mouseState.begin),
       end:   poop(m, mouseState.end),
     };
   })();
 
-  $: zoomCoeff = Math.exp(camera.zoom / 1000);
-
   $: realVertices = (() => {
-    const transform = normToFin(camera.shift, zoomCoeff);
+    const transform = normToFin(camera.shift, camera.zoom);
     return g.vertices.map((v) => {
       return poop(transform, v);
     });
