@@ -28,12 +28,12 @@
     = {type: "up"};
 
   type Camera = {
-    zoom: number,
+    zoom: Mat3,
     // camera position in screen coords
     shift: Mat3,
   };
   let camera: Camera = {
-    zoom: 1,
+    zoom: scale(1),
     shift: eye,
     //shift: [screenSize.width / 2, screenSize.height / 2],
   };
@@ -124,7 +124,7 @@
     case "camera":
       let moveFinPt: Vec2 = [e.movementX, e.movementY];
       const moveAbsPt: Vec2 = unembed(apply(
-        invert(scale(camera.zoom)),
+        invert(camera.zoom),
         embed(moveFinPt),
       ));
       camera.shift = compose(
@@ -188,7 +188,10 @@
     currentTarget: EventTarget & SVGSVGElement,
   }) {
     e.preventDefault();
-    camera.zoom /= Math.exp(e.deltaY / 1000);
+    camera.zoom = compose(
+      scale(Math.exp(-e.deltaY / 1000)),
+      camera.zoom,
+    );
   }
 
   function onMouseUp(_: MouseEvent) {
@@ -204,7 +207,7 @@
       scaleXY(screenSize),
       camera.shift,
       invert(halfPtTranslate),
-      scale(camera.zoom),
+      camera.zoom,
       halfPtTranslate,
     );
   }
