@@ -205,9 +205,7 @@
 
   $: realVertices = (() => {
     const transform = normToFin(camera);
-    return g.vertices.map((v) => {
-      return poop(transform, v);
-    });
+    return g.vertices.map((v) => poop(transform, v));
   })();
 
   $: intersections = (() => {
