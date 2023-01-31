@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount} from "svelte";
-  import {minus, plus, multiply, cross, distSq} from "./Vec2";
-  import type {Vec2} from "./Vec2";
+  import {minus, plus, multiply, cross, distSq} from "./math";
+  import type {Vec2, Vec3, Mat3} from "./math";
 
   const graphicsConfig = {
     vertexRadius: 10,
@@ -15,13 +15,13 @@
     backgroundColor: "#2e3436",
   };
 
-  let screenSize: Vec2 = {x: 1200, y: 700};
+  let screenSize = {width: 1200, height: 700};
   let mouseState:
     {type: "up"} // button is up
     | {type: "vertex", index: number} // holding vertex by that index
     | {type: "select", begin: Vec2, end: Vec2} // group selection
-    | {type: "camera"}
-    = {type: "up"}; // moving camera by such vector
+    | {type: "camera"} // moving camera by such vector
+    = {type: "up"};
 
   let camera: {
     zoom: number,
@@ -29,8 +29,8 @@
     shift: Vec2,
   } = {
     zoom: 0,
-    shift: {x: 0, y: 0},
-  }
+    shift: [screenSize.width / 2, screenSize.height / 2],
+  };
 
   let g: {
     // coords in [0, 1] x [0, 1]
@@ -65,7 +65,7 @@
   function generateVertices(n: number) {
     let vertices: Vec2[] = [];
     for (let i = 0; i < n; i++) {
-      vertices.push({x: Math.random(), y: Math.random()})
+      vertices.push([Math.random(), Math.random()]);
     }
     return vertices;
   }
@@ -118,17 +118,17 @@
   }
 
   function onMouseMove(e: MouseEvent) {
-    const mouseFinPt: Vec2 = {x: e.clientX, y: e.clientY};
-    const halfPt = multiply(screenSize, 1/2);
+    const mouseFinPt: Vec2 = [e.clientX, e.clientY];
+    const halfPt: Vec2 = [screenSize.width/2, screenSize.height/2];
     const mouseAbsPt: Vec2 = plus(
       multiply(minus(mouseFinPt, halfPt), 1/zoomCoeff),
       halfPt,
     );
     const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
-    const mouseNormPt: Vec2 = {
-      x: mouseScreenPt.x / screenSize.x,
-      y: mouseScreenPt.y / screenSize.y,
-    };
+    const mouseNormPt: Vec2 = [
+      mouseScreenPt[0] / screenSize.width,
+      mouseScreenPt[1] / screenSize.height,
+    ];
     switch (mouseState.type) {
     case "vertex":
       if (!selectedVertices.includes(mouseState.index)) {
@@ -141,7 +141,7 @@
       }
       break;
     case "camera":
-      let moveFinPt: Vec2 = {x: e.movementX, y: e.movementY};
+      let moveFinPt: Vec2 = [e.movementX, e.movementY];
       const moveAbsPt: Vec2 = multiply(moveFinPt, 1/zoomCoeff);
       camera.shift = plus(camera.shift, moveAbsPt);
       break;
@@ -153,15 +153,15 @@
           return [];
         }
 
-        const minX = Math.min(mouseState.begin.x, mouseState.end.x);
-        const maxX = Math.max(mouseState.begin.x, mouseState.end.x);
-        const minY = Math.min(mouseState.begin.y, mouseState.end.y);
-        const maxY = Math.max(mouseState.begin.y, mouseState.end.y);
+        const minX = Math.min(mouseState.begin[0], mouseState.end[0]);
+        const maxX = Math.max(mouseState.begin[0], mouseState.end[0]);
+        const minY = Math.min(mouseState.begin[1], mouseState.end[1]);
+        const maxY = Math.max(mouseState.begin[1], mouseState.end[1]);
 
         let res = [];
         for (let i = 0; i < g.vertices.length; i++) {
           const v = g.vertices[i];
-          if (v.x < minX || v.x > maxX || v.y < minY || v.y > maxY) {
+          if (v[0] < minX || v[0] > maxX || v[1] < minY || v[1] > maxY) {
             continue;
           }
           res.push(i);
@@ -174,7 +174,7 @@
 
   function onMouseDown(e: MouseEvent) {
     e.preventDefault();
-    const mousePos: Vec2 = {x: e.clientX, y: e.clientY};
+    const mousePos: Vec2 = [e.clientX, e.clientY];
     if (e.button == 0) { // LMB
       for (let i = 0; i < g.vertices.length; i++) {
         const vertex = realVertices[i];
@@ -187,16 +187,16 @@
       }
       mouseState = {type: "camera"};
     } else if (e.button == 2) { // RMB
-      const halfPt = multiply(screenSize, 1/2);
+      const halfPt: Vec2 = [screenSize.width/2, screenSize.height/2];
       const mouseAbsPt: Vec2 = plus(
         multiply(minus(mousePos, halfPt), 1/zoomCoeff),
         halfPt,
       );
       const mouseScreenPt: Vec2 = minus(mouseAbsPt, camera.shift);
-      const mouseNormPt: Vec2 = {
-        x: mouseScreenPt.x / screenSize.x,
-        y: mouseScreenPt.y / screenSize.y,
-      };
+      const mouseNormPt: Vec2 = [
+        mouseScreenPt[0] / screenSize.width,
+        mouseScreenPt[1] / screenSize.height,
+      ];
       mouseState = {
         type: "select",
         begin: mouseNormPt,
@@ -217,12 +217,12 @@
   }
 
   function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
-    const screenPt = {
-      x: pt.x * screenSize.x,
-      y: pt.y * screenSize.y,
-    };
+    const screenPt: Vec2 = [
+      pt[0] * screenSize.width,
+      pt[0] * screenSize.height,
+    ];
     const absPt = plus(screenPt, cameraPt);
-    const halfPt = multiply(screenSize, 1/2);
+    const halfPt: Vec2 = [screenSize.width/2, screenSize.height/2];
     const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
     return finPt;
   }
@@ -271,13 +271,17 @@
   })();
 
   onMount(() => {
-    g = generateGraph(30);
+    g = generateGraph(10);
+    camera = {
+      zoom: 0,
+      shift: [screenSize.width / 2, screenSize.height / 2],
+    };
   });
 </script>
 
 <div
-  bind:clientWidth={screenSize.x}
-  bind:clientHeight={screenSize.y}
+  bind:clientWidth={screenSize.width}
+  bind:clientHeight={screenSize.height}
   on:mousemove={onMouseMove}
   on:mousedown={onMouseDown}
   on:mouseup={onMouseUp}
@@ -298,37 +302,37 @@
         fill="none"
         stroke="black"
         stroke-width={graphicsConfig.edgeWidth}
-        points={`${realVertices[from].x},${realVertices[from].y} ${realVertices[to].x},${realVertices[to].y}`}
+        points={`${realVertices[from][0]},${realVertices[from][1]} ${realVertices[to][0]},${realVertices[to][1]}`}
       />
     {/each}
-    {#each realVertices as {x, y}, i}
+    {#each realVertices as v, i}
       <circle
         r={graphicsConfig.vertexRadius}
         fill={selectedVertices.includes(i) ? "#fa5b56" : graphicsConfig.vertexColor}
-        transform={`translate(${x},${y})`}
+        transform={`translate(${v[0]},${v[1]})`}
       />
     {/each}
     {#each intersections as {pt}}
     	<circle
         r={graphicsConfig.intersectionRadius}
         fill={graphicsConfig.intersectionColor}
-        transform={`translate(${pt.x},${pt.y})`}
+        transform={`translate(${pt[0]},${pt[1]})`}
       />
     {/each}
     {#if realSelect !== null}
       <rect
         id="select"
-        width="{Math.abs(realSelect.end.x-realSelect.begin.x)}px"
-        height="{Math.abs(realSelect.end.y-realSelect.begin.y)}px"
-        x={Math.min(realSelect.begin.x, realSelect.end.x)}
-        y={Math.min(realSelect.begin.y, realSelect.end.y)}
+        width="{Math.abs(realSelect.end[0]-realSelect.begin[0])}px"
+        height="{Math.abs(realSelect.end[1]-realSelect.begin[1])}px"
+        x={Math.min(realSelect.begin[0], realSelect.end[0])}
+        y={Math.min(realSelect.begin[1], realSelect.end[1])}
       />
     {/if}
     <text
       fill="white"
       dominant-baseline="central"
       text-anchor="middle"
-      transform={`translate(${screenSize.x/2}, ${20})`}
+      transform={`translate(${screenSize.width/2}, ${20})`}
     >
       {#if intersections.length === 0}
         vahui
