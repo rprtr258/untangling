@@ -142,9 +142,14 @@
       }
       break;
     case "camera":
-      let moveFinPt: Vec2 = [e.movementX, e.movementY];
-      const moveAbsPt: Vec2 = multiply(moveFinPt, 1/zoomCoeff);
-      camera.shift = plus(camera.shift, moveAbsPt);
+      let moveFinPt = embed([e.movementX, e.movementY]);
+      camera.shift = unembed(apply(
+        translate(unembed(apply(
+          scale(1/zoomCoeff),
+          moveFinPt,
+        ))),
+        embed(camera.shift),
+      ));
       break;
     case "select":
       mouseState.end = mouseNormPt;
