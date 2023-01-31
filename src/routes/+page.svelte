@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount} from "svelte";
-  import {minus, plus, multiply, cross, distSq, scaleXY, unembed, apply, embed, translate, compose, scale, invert} from "./math";
+  import {minus, plus, multiply, cross, distSq, scaleXY, unembed, apply, embed, translate, compose, scale, invert, intersect} from "./math";
   import type {Vec2, Vec3, Mat3} from "./math";
 
   const graphicsConfig = {
@@ -45,23 +45,6 @@
     edges: [],
   };
   let selectedVertices: number[] = [];
-
-  const EPS = 1e-6;
-  function intersect(v1: Vec2, v2: Vec2, w1: Vec2, w2: Vec2): Vec2 | null {
-    const w = minus(w2, w1);
-    const v = minus(v2, v1);
-    const m = minus(v1, w1);
-    const delta = cross(v, w);
-    if (delta == 0) { // collinear
-      return null;
-    }
-    const deltaA = cross(v, m) / delta;
-    const deltaB = cross(w, m) / delta;
-    if (deltaB <= EPS || deltaB >= 1-EPS || deltaA <= EPS || deltaA >= 1-EPS) {
-      return null;
-    }
-    return plus(v1, multiply(v, deltaB));
-  }
 
   function generateVertices(n: number) {
     let vertices: Vec2[] = [];

@@ -106,6 +106,24 @@ export function scale(coeff: number): Mat3 {
   return scaleXY([coeff, coeff]);
 }
 
+const EPS = 1e-6;
+// intersect two line segments v1-v2 and w1-w2
+export function intersect(v1: Vec2, v2: Vec2, w1: Vec2, w2: Vec2): Vec2 | null {
+  const w = minus(w2, w1);
+  const v = minus(v2, v1);
+  const m = minus(v1, w1);
+  const delta = cross(v, w);
+  if (delta == 0) { // collinear
+    return null;
+  }
+  const deltaA = cross(v, m) / delta;
+  const deltaB = cross(w, m) / delta;
+  if (deltaB <= EPS || deltaB >= 1-EPS || deltaA <= EPS || deltaA >= 1-EPS) {
+    return null;
+  }
+  return plus(v1, multiply(v, deltaB));
+}
+
 // =============== old ==============
 
 export function minus(v: Vec2, w: Vec2): Vec2 {
