@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount} from "svelte";
-  import {minus, plus, multiply, cross, distSq} from "./math";
+  import {minus, plus, multiply, cross, distSq, scaleXY, unembed, apply, embed} from "./math";
   import type {Vec2, Vec3, Mat3} from "./math";
 
   const graphicsConfig = {
@@ -94,14 +94,14 @@
     }
     allEdges = shuffle(allEdges);
     let edges2: typeof allEdges = [];
-    for (let edge of allEdges) {
+    for (let edge1 of allEdges) {
       let addsIntersection = false;
-      for (let bedge of edges2) {
+      for (let edge2 of edges2) {
         if (intersect(
-          vertices[edge.from],
-          vertices[edge.to],
-          vertices[bedge.from],
-          vertices[bedge.to],
+          vertices[edge1.from],
+          vertices[edge1.to],
+          vertices[edge2.from],
+          vertices[edge2.to],
         ) !== null) {
           addsIntersection = true;
           break;
@@ -109,7 +109,7 @@
       }
       // TODO: fix filtering too much edges
       if (!addsIntersection) {
-        edges2.push(edge);
+        edges2.push(edge1);
       }
     }
     return {
@@ -218,10 +218,7 @@
   }
 
   function normToFin(pt: Vec2, cameraPt: Vec2, zoomCoeff: number): Vec2 {
-    const screenPt: Vec2 = [
-      pt[0] * screenSize[0],
-      pt[1] * screenSize[1],
-    ];
+    const screenPt: Vec2 = unembed(apply(scaleXY(screenSize), embed(pt)));
     const absPt = plus(screenPt, cameraPt);
     const halfPt = multiply(screenSize, 1/2);
     const finPt = plus(multiply(minus(absPt, halfPt), zoomCoeff), halfPt);
