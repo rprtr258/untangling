@@ -121,8 +121,7 @@
       );
       break;
     case "select":
-      mouseState.end = mouseNormPt;
-      mouseState = mouseState;
+      mouseState = {...mouseState, end: mouseNormPt};
       const [minX, maxX] = minmax(mouseState.begin[0], mouseState.end[0]);
       const [minY, maxY] = minmax(mouseState.begin[1], mouseState.end[1]);
       selectedVertices = filterMap(
