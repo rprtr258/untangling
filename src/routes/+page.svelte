@@ -212,7 +212,6 @@
     let newIntersections = [];
     for (let i = 0; i < g.edges.length; i++) {
       for (let j = 0; j < i; j++) {
-        if (i == j) continue;
         const edge1 = g.edges[i];
         const edge2 = g.edges[j];
         const intersection = intersect(
