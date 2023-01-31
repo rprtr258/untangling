@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount} from "svelte";
   import {
-    minus, plus, distSq,
+    minus, distSq,
     scaleXY, translate, scale,
     unembed, apply, embed, compose, invert, intersect, poop, minmax, eye,
   } from "./math";

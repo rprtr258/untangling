@@ -135,7 +135,7 @@ export function minus(v: Vec2, w: Vec2): Vec2 {
   return [v[0] - w[0], v[1] - w[1]];
 }
 
-export function plus(v: Vec2, w: Vec2): Vec2 {
+function plus(v: Vec2, w: Vec2): Vec2 {
   return [v[0] + w[0], v[1] + w[1]];
 }
 
