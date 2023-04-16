@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
+		"lib": ["ES2022", "DOM"],
 		"allowJs": false,
-		"checkJs": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": false,
