@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+
+<script type="importmap">
+  {
+    "imports": {
+      "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js"
+    }
+  }
+</script>
+
+<script type="module">
+  import { createApp } from "vue";
+  import Root from './root.js'
+
+  createApp(Root).mount('#app')
+</script>
+<head>
+	<meta charset="utf-8" />
+	<link rel="icon" href="/static/favicon.png" />
+	<meta name="viewport" content="width=device-width" />
+  <style>
+    body {
+      margin: 0;
+      height: 100%;
+    }
+    div, html {
+      height: 100%;
+    }
+    #select {
+      fill: none;
+      stroke-width: .2rem;
+      stroke: #ff1612;
+      stroke-dasharray: .3rem .4rem 1rem .4rem;
+    }
+  </style>
+</head>
+
+<body id="app">
+</body>

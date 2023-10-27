@@ -1,38 +1,61 @@
-export type Mat3 = [
+// @ts-check
+
+/** @typedef {[
   [number, number, number],
   [number, number, number],
   [number, number, number]
-];
+]} Mat3 */
 
 export const eye = translate([0, 0]);
 
-export type Vec2 = [number, number];
+/** @typedef {[number, number]} Vec2 */
+/** @typedef {[number, number, number]} Vec3 */
 
-export type Vec3 = [number, number, number];
-
-export function embed(v: Vec2): Vec3 {
+/**
+ * @param {Vec2} v 
+ * @returns {Vec3}
+ */
+export function embed(v) {
   return [v[0], v[1], 1];
 }
 
-export function unembed(v: Vec3): Vec2 {
+/**
+ * @param {Vec3} v 
+ * @returns {Vec2}
+ */
+export function unembed(v) {
   return [x(v), y(v)];
 }
 
-export function x(v: Vec3): number {
+/**
+ * @param {Vec3} v 
+ * @returns {number}
+ */
+export function x(v) {
   return v[0] / v[2];
 }
 
-export function y(v: Vec3): number {
+/**
+ * @param {Vec3} v 
+ * @returns {number}
+ */
+export function y(v) {
   return v[1] / v[2];
 }
 
-export function compose(...ms: Mat3[]): Mat3 {
+/**
+ * @param {...Mat3} ms
+ * @returns {Mat3}
+ */
+export function compose(...ms) {
+  /** @type {Mat3} */
   let res = [
     [1, 0, 0],
     [0, 1, 0],
     [0, 0, 1],
   ];
   for (let m of ms) {
+    /** @type {Mat3} */
     let newRes = [
       [0, 0, 0],
       [0, 0, 0],
@@ -47,14 +70,24 @@ export function compose(...ms: Mat3[]): Mat3 {
     }
     res = newRes;
   }
-  return res as Mat3;
+  return res;
 }
 
-export function poop(m: Mat3, v: Vec2): Vec2 {
+/**
+ * @param {Mat3} m 
+ * @param {Vec2} v 
+ * @returns {Vec2}
+ */
+export function poop(m, v) {
   return unembed(apply(m, embed(v)));
 }
 
-export function apply(m: Mat3, v: Vec3): Vec3 {
+/**
+ * @param {Mat3} m 
+ * @param {Vec3} v 
+ * @returns {Vec3}
+ */
+export function apply(m, v) {
   return [
     m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
     m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
@@ -62,7 +95,11 @@ export function apply(m: Mat3, v: Vec3): Vec3 {
   ];
 }
 
-export function invert(m: Mat3): Mat3 {
+/**
+ * @param {Mat3} m 
+ * @returns {Mat3}
+ */
+export function invert(m) {
   const [
     [a, b, c],
     [d, e, f],
@@ -81,7 +118,11 @@ export function invert(m: Mat3): Mat3 {
   ]);
 }
 
-export function translate(v: Vec2): Mat3 {
+/**
+ * @param {Vec2} v 
+ * @returns {Mat3}
+ */
+export function translate(v) {
   return [
     [1, 0, v[0]],
     [0, 1, v[1]],
@@ -89,7 +130,11 @@ export function translate(v: Vec2): Mat3 {
   ];
 }
 
-export function scaleXY(v: Vec2): Mat3 {
+/**
+ * @param {Vec2} v 
+ * @returns {Mat3}
+ */
+export function scaleXY(v) {
   return [
     [v[0],    0, 0],
     [   0, v[1], 0],
@@ -97,21 +142,38 @@ export function scaleXY(v: Vec2): Mat3 {
   ];
 }
 
-export function scaleX(coeff: number): Mat3 {
+/**
+ * @param {number} coeff
+ * @returns {Mat3}
+ */
+export function scaleX(coeff) {
   return scaleXY([coeff, 1]);
 }
 
-export function scaleY(coeff: number): Mat3 {
+/**
+ * @param {number} coeff
+ * @returns {Mat3}
+ */
+export function scaleY(coeff) {
   return scaleXY([1, coeff]);
 }
 
-export function scale(coeff: number): Mat3 {
+/**
+ * @param {number} coeff
+ * @returns {Mat3}
+ */
+export function scale(coeff) {
   return scaleXY([coeff, coeff]);
 }
 
 const EPS = 1e-6;
-// intersect two line segments v1-v2 and w1-w2
-export function intersect([v1, v2]: [Vec2, Vec2], [w1, w2]: [Vec2, Vec2]): Vec2 | null {
+/**
+ * intersect two line segments v1-v2 and w1-w2
+ * @param {[Vec2, Vec2]} param0 
+ * @param {[Vec2, Vec2]} param1 
+ * @returns {Vec2 | null}
+ */
+export function intersect([v1, v2], [w1, w2]) {
   const w = minus(w2, w1);
   const v = minus(v2, v1);
   const m = minus(v1, w1);
@@ -127,30 +189,64 @@ export function intersect([v1, v2]: [Vec2, Vec2], [w1, w2]: [Vec2, Vec2]): Vec2 
   return plus(v1, multiply(v, deltaB));
 }
 
-export function minmax(x: number, y: number): [number, number] {
+/**
+ * @param {number} x 
+ * @param {number} y 
+ * @returns {[number, number]}
+ */
+export function minmax(x, y) {
   return x < y ? [x, y] : [y, x];
 }
 
-export function minus(v: Vec2, w: Vec2): Vec2 {
+/**
+ * @param {Vec2} v 
+ * @param {Vec2} w 
+ * @returns {Vec2}
+ */
+export function minus(v, w) {
   return [v[0] - w[0], v[1] - w[1]];
 }
 
-function plus(v: Vec2, w: Vec2): Vec2 {
+/**
+ * @param {Vec2} v 
+ * @param {Vec2} w 
+ * @returns {Vec2}
+ */
+function plus(v, w) {
   return [v[0] + w[0], v[1] + w[1]];
 }
 
-function multiply(v: Vec2, coeff: number): Vec2 {
+/**
+ * @param {Vec2} v 
+ * @param {number} coeff 
+ * @returns {Vec2}
+ */
+function multiply(v, coeff) {
   return [v[0] * coeff, v[1] * coeff];
 }
 
-function cross(v: Vec2, w: Vec2): number {
+/**
+ * @param {Vec2} v 
+ * @param {Vec2} w 
+ * @returns {number}
+ */
+function cross(v, w) {
   return v[0] * w[1] - v[1] * w[0];
 }
 
-function dot(v: Vec2, w: Vec2): number {
+/**
+ * @param {Vec2} v 
+ * @param {Vec2} w 
+ * @returns {number}
+ */
+function dot(v, w) {
   return v[0] * w[0] + v[1] * w[1];
 }
 
-export function distSq(v: Vec2): number {
+/**
+ * @param {Vec2} v 
+ * @returns {number}
+ */
+export function distSq(v) {
   return dot(v, v);
 }
