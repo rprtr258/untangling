@@ -14,18 +14,23 @@
 
   createApp(Root).mount('#app')
 </script>
+
 <head>
-	<meta charset="utf-8" />
-	<link rel="icon" href="/static/favicon.png" />
-	<meta name="viewport" content="width=device-width" />
+  <meta charset="utf-8" />
+  <link rel="icon" href="/static/favicon.png" />
+  <meta name="viewport" content="width=device-width" />
   <style>
     body {
       margin: 0;
       height: 100%;
+      overflow-y: hidden;
     }
-    div, html {
+
+    div,
+    html {
       height: 100%;
     }
+
     #select {
       fill: none;
       stroke-width: .2rem;

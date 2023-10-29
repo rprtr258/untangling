@@ -8,7 +8,7 @@ import {
   scaleXY, translate, scale,
   unembed, apply, embed, compose, invert, intersect, poop as apply2, minmax, eye,
 } from "./math.js";
-import {filterMap, generate, shuffle} from "./list.js";
+import { filterMap, generate, shuffle } from "./list.js";
 
 /**
  * @param {number} n
@@ -32,7 +32,7 @@ function generateGraph(n) {
     vertices.length,
     i => generate(
       i,
-      j => {return {from: i, to: j}},
+      j => { return { from: i, to: j } },
     ),
   ).flat());
   /** @type {typeof allEdges} */
@@ -96,12 +96,12 @@ export default {
         | {type: "select", begin: Vec2, end: Vec2} // group selection
         | {type: "camera"} // moving camera by such vector
       } */
-      mouseState: {type: "up"},
+      mouseState: { type: "up" },
       /** @type {Camera} */
-    // camera = {
-    //   zoom: 0,
-    //   shift: [screenSize.width / 2, screenSize.height / 2],
-    // };
+      // camera = {
+      //   zoom: 0,
+      //   shift: [screenSize.width / 2, screenSize.height / 2],
+      // };
       camera: {
         zoom: scale(1),
         // camera position in screen coords
@@ -133,43 +133,43 @@ export default {
         embed(mouseFinPt),
       ));
       switch (this.mouseState.type) {
-      case "vertex":
-        if (!this.selectedVertices.includes(this.mouseState.index)) {
-          this.g.vertices[this.mouseState.index] = mouseNormPt;
-        } else {
-          const diff = minus(mouseNormPt, this.g.vertices[this.mouseState.index]);
-          const move = translate(diff);
-          for (const vertexIdx of this.selectedVertices) {
-            this.g.vertices[vertexIdx] = apply2(move, this.g.vertices[vertexIdx]);
+        case "vertex":
+          if (!this.selectedVertices.includes(this.mouseState.index)) {
+            this.g.vertices[this.mouseState.index] = mouseNormPt;
+          } else {
+            const diff = minus(mouseNormPt, this.g.vertices[this.mouseState.index]);
+            const move = translate(diff);
+            for (const vertexIdx of this.selectedVertices) {
+              this.g.vertices[vertexIdx] = apply2(move, this.g.vertices[vertexIdx]);
+            }
           }
-        }
-        break;
-      case "camera":
-        /** @type {Vec2} */
-        let moveFinPt = [e.movementX, e.movementY];
-        /** @type {Vec2} */
-        const moveAbsPt = unembed(apply(
-          invert(this.camera.zoom),
-          embed(moveFinPt),
-        ));
-        this.camera.shift = compose(
-          translate(moveAbsPt),
-          this.camera.shift,
-        );
-        break;
-      case "select":
-        this.mouseState = {...this.mouseState, end: mouseNormPt};
-        const [minX, maxX] = minmax(this.mouseState.begin[0], this.mouseState.end[0]);
-        const [minY, maxY] = minmax(this.mouseState.begin[1], this.mouseState.end[1]);
-        this.selectedVertices = filterMap(
-          this.g.vertices,
-          (v, i) => [
-            i,
-            v[0] >= minX && v[0] <= maxX &&
-            v[1] >= minY && v[1] <= maxY,
-          ],
-        );
-        break;
+          break;
+        case "camera":
+          /** @type {Vec2} */
+          let moveFinPt = [e.movementX, e.movementY];
+          /** @type {Vec2} */
+          const moveAbsPt = unembed(apply(
+            invert(this.camera.zoom),
+            embed(moveFinPt),
+          ));
+          this.camera.shift = compose(
+            translate(moveAbsPt),
+            this.camera.shift,
+          );
+          break;
+        case "select":
+          this.mouseState.end = mouseNormPt;
+          const [minX, maxX] = minmax(this.mouseState.begin[0], this.mouseState.end[0]);
+          const [minY, maxY] = minmax(this.mouseState.begin[1], this.mouseState.end[1]);
+          this.selectedVertices = filterMap(
+            this.g.vertices,
+            (v, i) => [
+              i,
+              v[0] >= minX && v[0] <= maxX &&
+              v[1] >= minY && v[1] <= maxY,
+            ],
+          );
+          break;
       }
     },
     /**
@@ -185,12 +185,12 @@ export default {
           const radii = minus(mousePos, vertex);
           // TODO: find closest
           if (distSq(radii) <= this.graphicsConfig.vertexRadius ** 2) {
-            this.mouseState = {type: "vertex", index: i};
+            this.mouseState = { type: "vertex", index: i };
             console.log("clicked vertex", i);
             return;
           }
         }
-        this.mouseState = {type: "camera"};
+        this.mouseState = { type: "camera" };
       } else if (e.button == 2) { // RMB
         const mouseNormPt = unembed(apply(
           invert(normToFin(this.camera, this.screenSize)),
@@ -221,7 +221,7 @@ export default {
     * @param {MouseEvent} _
     */
     onMouseUp(_) {
-      this.mouseState = {type: "up"};
+      this.mouseState = { type: "up" };
     },
   },
   computed: {
@@ -233,7 +233,7 @@ export default {
       const m = normToFin(this.camera, this.screenSize);
       return {
         begin: apply2(m, this.mouseState.begin),
-        end:   apply2(m, this.mouseState.end),
+        end: apply2(m, this.mouseState.end),
       };
     },
     realVertices() {
@@ -289,7 +289,7 @@ export default {
         />
         <circle v-for="[i, v] in Object.entries(realVertices)"
           :r="graphicsConfig.vertexRadius"
-          :fill="selectedVertices.includes(i) ? '#fa5b56' : graphicsConfig.vertexColor"
+          :fill="selectedVertices.includes(Number(i)) ? '#fa5b56' : graphicsConfig.vertexColor"
           :transform="'translate('+v[0]+','+v[1]+')'"
         />
         <circle v-for="{pt} in intersections"
