@@ -90,18 +90,14 @@ export default {
         textColor: "#ffffff",
         backgroundColor: "#2e3436",
       },
-      /** @type {
-        {type: "up"} // button is up
-        | {type: "vertex", index: number} // holding vertex by that index
-        | {type: "select", begin: Vec2, end: Vec2} // group selection
-        | {type: "camera"} // moving camera by such vector
-      } */
+      /** @type {{type: "up"} // button is up
+       *    | {type: "vertex", index: number} // holding vertex by that index
+       *    | {type: "select", begin: Vec2, end: Vec2} // group selection
+       *    | {type: "camera"} // moving camera by such vector
+       * }
+      */
       mouseState: { type: "up" },
       /** @type {Camera} */
-      // camera = {
-      //   zoom: 0,
-      //   shift: [screenSize.width / 2, screenSize.height / 2],
-      // };
       camera: {
         zoom: scale(1),
         // camera position in screen coords
@@ -204,11 +200,9 @@ export default {
       }
     },
     /**
-     * @param {
-        WheelEvent & {
-          currentTarget: EventTarget & SVGSVGElement,
-        }
-      } e
+     * @param {WheelEvent & {
+     *   currentTarget: EventTarget & SVGSVGElement,
+     * }} e
     */
     onWheel(e) {
       e.preventDefault();
