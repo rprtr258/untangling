@@ -4,9 +4,10 @@
 /** @typedef {import('./math.js').Mat3} Mat3 */
 
 import {
-  minus, distSq,
+  multiply, plus, minus, distSq,
   scaleXY, translate, scale,
-  unembed, apply, embed, compose, invert, intersect, poop as apply2, minmax, eye,
+  compose, invert, intersect, apply2, minmax,
+  eye,
 } from "./math.js";
 import { filterMap, generate, shuffle } from "./list.js";
 
@@ -38,7 +39,6 @@ function generateGraph(n) {
   /** @type {typeof allEdges} */
   let edges2 = [];
   for (let edge1 of allEdges) {
-    // TODO: fix filtering too much edges
     if (edges2.every((edge2) => intersect(
       [vertices[edge1.from], vertices[edge1.to]],
       [vertices[edge2.from], vertices[edge2.to]],
@@ -52,33 +52,12 @@ function generateGraph(n) {
   };
 }
 
-/** @typedef {{
-  zoom: Mat3,
-  shift: Mat3,
-}} Camera */
-
-/**
- * @param {Camera} camera
- * @returns {Mat3}
- */
-function normToFin(camera, screenSize) {
-  const halfPtTranslate = translate([
-    screenSize[0] / 2,
-    screenSize[1] / 2,
-  ]);
-  return compose(
-    scaleXY(screenSize),
-    camera.shift,
-    invert(halfPtTranslate),
-    camera.zoom,
-    halfPtTranslate,
-  );
-}
-
 export default {
   data() {
+    /** @type {Vec2} */
+    const screenSize = [1920, 1080];
     return {
-      screenSize: [1920, 1080],
+      screenSize: screenSize,
       graphicsConfig: {
         vertexRadius: 10,
         vertexColor: "#babdb6",
@@ -97,13 +76,8 @@ export default {
        * }
       */
       mouseState: { type: "up" },
-      /** @type {Camera} */
-      camera: {
-        zoom: scale(1),
-        // camera position in screen coords
-        shift: eye,
-        //shift: [screenSize.width / 2, screenSize.height / 2],
-      },
+      /** @type {Mat3} */
+      camera: scaleXY(screenSize),
       /** @type {{
         vertices: Vec2[],
         // coords in [0, 1] x [0, 1]
@@ -124,10 +98,7 @@ export default {
     onMouseMove(e) {
       /** @type {Vec2} */
       const mouseFinPt = [e.clientX, e.clientY];
-      const mouseNormPt = unembed(apply(
-        invert(normToFin(this.camera, this.screenSize)),
-        embed(mouseFinPt),
-      ));
+      const mouseNormPt = apply2(invert(this.camera), mouseFinPt);
       switch (this.mouseState.type) {
         case "vertex":
           if (!this.selectedVertices.includes(this.mouseState.index)) {
@@ -143,15 +114,7 @@ export default {
         case "camera":
           /** @type {Vec2} */
           let moveFinPt = [e.movementX, e.movementY];
-          /** @type {Vec2} */
-          const moveAbsPt = unembed(apply(
-            invert(this.camera.zoom),
-            embed(moveFinPt),
-          ));
-          this.camera.shift = compose(
-            translate(moveAbsPt),
-            this.camera.shift,
-          );
+          this.camera = compose(this.camera, translate(moveFinPt));
           break;
         case "select":
           this.mouseState.end = mouseNormPt;
@@ -188,10 +151,7 @@ export default {
         }
         this.mouseState = { type: "camera" };
       } else if (e.button == 2) { // RMB
-        const mouseNormPt = unembed(apply(
-          invert(normToFin(this.camera, this.screenSize)),
-          embed(mousePos),
-        ));
+        const mouseNormPt = apply2(invert(this.camera), mousePos);
         this.mouseState = {
           type: "select",
           begin: mouseNormPt,
@@ -206,33 +166,35 @@ export default {
     */
     onWheel(e) {
       e.preventDefault();
-      this.camera.zoom = compose(
-        scale(Math.exp(-e.deltaY / 1000)),
-        this.camera.zoom,
+      const alpha = Math.exp(-e.deltaY / 1000);
+      /** @type {Vec2} */
+      const mouseFinPt = [e.clientX, e.clientY];
+      this.camera = compose(
+        this.camera,
+        invert(translate(mouseFinPt)),
+        scale(alpha),
+        translate(mouseFinPt),
       );
     },
-    /**
-    * @param {MouseEvent} _
-    */
+    /** @param {MouseEvent} _ */
     onMouseUp(_) {
       this.mouseState = { type: "up" };
     },
   },
   computed: {
     realSelect() {
-      if (this.mouseState.type !== "select") {
+      const state = this.mouseState;
+      if (state.type !== "select") {
         return null;
       }
 
-      const m = normToFin(this.camera, this.screenSize);
       return {
-        begin: apply2(m, this.mouseState.begin),
-        end: apply2(m, this.mouseState.end),
+        begin: apply2(this.camera, state.begin),
+        end: apply2(this.camera, state.end),
       };
     },
     realVertices() {
-      const transform = normToFin(this.camera, this.screenSize);
-      return this.g.vertices.map((v) => apply2(transform, v));
+      return this.g.vertices.map((/** @type {Vec2} */ v) => apply2(this.camera, v));
     },
     intersections() {
       let newIntersections = [];

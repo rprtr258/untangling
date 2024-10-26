@@ -12,7 +12,7 @@ export const eye = translate([0, 0]);
 /** @typedef {[number, number, number]} Vec3 */
 
 /**
- * @param {Vec2} v 
+ * @param {Vec2} v
  * @returns {Vec3}
  */
 export function embed(v) {
@@ -20,7 +20,7 @@ export function embed(v) {
 }
 
 /**
- * @param {Vec3} v 
+ * @param {Vec3} v
  * @returns {Vec2}
  */
 export function unembed(v) {
@@ -28,7 +28,7 @@ export function unembed(v) {
 }
 
 /**
- * @param {Vec3} v 
+ * @param {Vec3} v
  * @returns {number}
  */
 export function x(v) {
@@ -36,7 +36,7 @@ export function x(v) {
 }
 
 /**
- * @param {Vec3} v 
+ * @param {Vec3} v
  * @returns {number}
  */
 export function y(v) {
@@ -74,17 +74,17 @@ export function compose(...ms) {
 }
 
 /**
- * @param {Mat3} m 
- * @param {Vec2} v 
+ * @param {Mat3} m
+ * @param {Vec2} v
  * @returns {Vec2}
  */
-export function poop(m, v) {
+export function apply2(m, v) {
   return unembed(apply(m, embed(v)));
 }
 
 /**
- * @param {Mat3} m 
- * @param {Vec3} v 
+ * @param {Mat3} m
+ * @param {Vec3} v
  * @returns {Vec3}
  */
 export function apply(m, v) {
@@ -96,7 +96,7 @@ export function apply(m, v) {
 }
 
 /**
- * @param {Mat3} m 
+ * @param {Mat3} m
  * @returns {Mat3}
  */
 export function invert(m) {
@@ -119,7 +119,7 @@ export function invert(m) {
 }
 
 /**
- * @param {Vec2} v 
+ * @param {Vec2} v
  * @returns {Mat3}
  */
 export function translate(v) {
@@ -131,7 +131,7 @@ export function translate(v) {
 }
 
 /**
- * @param {Vec2} v 
+ * @param {Vec2} v
  * @returns {Mat3}
  */
 export function scaleXY(v) {
@@ -169,8 +169,8 @@ export function scale(coeff) {
 const EPS = 1e-6;
 /**
  * intersect two line segments v1-v2 and w1-w2
- * @param {[Vec2, Vec2]} param0 
- * @param {[Vec2, Vec2]} param1 
+ * @param {[Vec2, Vec2]} param0
+ * @param {[Vec2, Vec2]} param1
  * @returns {Vec2 | null}
  */
 export function intersect([v1, v2], [w1, w2]) {
@@ -190,8 +190,8 @@ export function intersect([v1, v2], [w1, w2]) {
 }
 
 /**
- * @param {number} x 
- * @param {number} y 
+ * @param {number} x
+ * @param {number} y
  * @returns {[number, number]}
  */
 export function minmax(x, y) {
@@ -199,8 +199,8 @@ export function minmax(x, y) {
 }
 
 /**
- * @param {Vec2} v 
- * @param {Vec2} w 
+ * @param {Vec2} v
+ * @param {Vec2} w
  * @returns {Vec2}
  */
 export function minus(v, w) {
@@ -208,26 +208,26 @@ export function minus(v, w) {
 }
 
 /**
- * @param {Vec2} v 
- * @param {Vec2} w 
+ * @param {Vec2} v
+ * @param {Vec2} w
  * @returns {Vec2}
  */
-function plus(v, w) {
+export function plus(v, w) {
   return [v[0] + w[0], v[1] + w[1]];
 }
 
 /**
- * @param {Vec2} v 
- * @param {number} coeff 
+ * @param {Vec2} v
+ * @param {number} coeff
  * @returns {Vec2}
  */
-function multiply(v, coeff) {
+export function multiply(v, coeff) {
   return [v[0] * coeff, v[1] * coeff];
 }
 
 /**
- * @param {Vec2} v 
- * @param {Vec2} w 
+ * @param {Vec2} v
+ * @param {Vec2} w
  * @returns {number}
  */
 function cross(v, w) {
@@ -235,8 +235,8 @@ function cross(v, w) {
 }
 
 /**
- * @param {Vec2} v 
- * @param {Vec2} w 
+ * @param {Vec2} v
+ * @param {Vec2} w
  * @returns {number}
  */
 function dot(v, w) {
@@ -244,7 +244,7 @@ function dot(v, w) {
 }
 
 /**
- * @param {Vec2} v 
+ * @param {Vec2} v
  * @returns {number}
  */
 export function distSq(v) {
